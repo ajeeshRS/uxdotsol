@@ -1,0 +1,284 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "uxdotsol",
+  "homepage": "https://uxdotsol.xyz",
+  "items": [
+    {
+      "name": "address-display",
+      "type": "registry:component",
+      "title": "Address Display",
+      "description": "Displays a shortened blockchain address with optional copy-to-clipboard support.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/address-display.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "connect-wallet-btn",
+      "type": "registry:component",
+      "title": "Wallet Connect Button",
+      "description": "Connects a Solana wallet and displays the current connection state.",
+      "dependencies": [
+        "lucide-react",
+        "next",
+        "@solana/wallet-adapter-base",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js"
+      ],
+      "docs": "Requires a Solana Wallet Adapter provider in the application tree. This item also installs a Next.js App Router route at app/api/wallet-account/route.ts.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/connect-wallet-btn.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/api/wallet-account/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/wallet-account/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:component",
+      "title": "Button",
+      "description": "Reusable button component with variants, sizes, and accessible interaction states.",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/button.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "nft-card",
+      "type": "registry:component",
+      "title": "NFT Card",
+      "description": "Displays NFT artwork, metadata, pricing, and actions in a reusable card.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/nft-card.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "nft-card-collection",
+      "type": "registry:component",
+      "title": "NFT Card Collection",
+      "description": "Displays collection artwork, stats, description, and item previews in a reusable card.",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/nft-card.json"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/nft-card-collection.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "coin-price",
+      "type": "registry:component",
+      "title": "Coin Price Tooltip",
+      "description": "Shows a token price summary with optional trend details in a tooltip.",
+      "dependencies": [
+        "motion",
+        "next",
+        "lucide-react",
+        "recharts",
+        "@number-flow/react"
+      ],
+      "registryDependencies": [
+        "chart"
+      ],
+      "envVars": {
+        "COINGECKO_API_KEY": "",
+        "COINGECKO_API_PLAN": "demo"
+      },
+      "docs": "Requires Next.js App Router. Add a CoinGecko Demo or Pro API key to COINGECKO_API_KEY. Set COINGECKO_API_PLAN=pro when using a Pro key.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/coin-price.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "app/api/coin-price/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/coin-price/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "token-swap",
+      "type": "registry:component",
+      "title": "Token Swap Card",
+      "description": "Provides a token swap interface with token inputs, slippage options, and confirmation states.",
+      "dependencies": [
+        "lucide-react",
+        "@number-flow/react"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/token-swap.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-badge",
+      "type": "registry:component",
+      "title": "Status Badge",
+      "description": "Displays network or service status with configurable labels and visual indicators.",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/status-badge.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "use-token-balance",
+      "type": "registry:hook",
+      "title": "useTokenBalance",
+      "description": "Fetches, aggregates, and refreshes precise SPL token balances for a wallet and mint.",
+      "dependencies": [
+        "@solana/web3.js"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-token-balance.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-transaction-simulation",
+      "type": "registry:hook",
+      "title": "useTransactionSimulation",
+      "description": "Simulates Solana transactions before requesting a wallet signature.",
+      "dependencies": [
+        "@solana/web3.js"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-transaction-simulation.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-smart-retry",
+      "type": "registry:hook",
+      "title": "useSmartRetry",
+      "description": "Retries asynchronous Solana operations with configurable backoff and error handling.",
+      "dependencies": [
+        "@solana/web3.js"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-smart-retry.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-transaction-status",
+      "type": "registry:hook",
+      "title": "useTransactionStatus",
+      "description": "Tracks a Solana transaction signature and exposes confirmation state.",
+      "dependencies": [
+        "@solana/web3.js"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-transaction-status.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-private-payment",
+      "type": "registry:hook",
+      "title": "usePrivatePayment",
+      "description": "Typed React hook for the MagicBlock Private Payments API with auth-aware requests, transaction builders, balance readers, and mint initialization checks.",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-private-payment.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-optimistic-transaction",
+      "type": "registry:hook",
+      "title": "useOptimisticTransaction",
+      "description": "Manages optimistic transaction state with confirmation and rollback handling.",
+      "dependencies": [],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-optimistic-transaction.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "quick-send-flow",
+      "type": "registry:component",
+      "title": "Quick Send Flow",
+      "description": "Drop-in SOL send flow with recipient validation, transfer review, wallet approval states, retry handling, and an explorer receipt.",
+      "dependencies": [
+        "lucide-react",
+        "@solana/web3.js"
+      ],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-smart-retry.json",
+        "https://uxdotsol.xyz/r/use-transaction-status.json"
+      ],
+      "files": [
+        {
+          "path": "registry/uxdotsol/flows/quick-send-flow.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "private-transfer",
+      "type": "registry:component",
+      "title": "Private Transfer Template",
+      "description": "Standalone devnet USDC private payment template with wallet connect, mint initialization, wallet signing, submission, and confirmation.",
+      "dependencies": [
+        "@solana/wallet-adapter-base",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js"
+      ],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-private-payment.json",
+        "https://uxdotsol.xyz/r/connect-wallet-btn.json"
+      ],
+      "docs": "Requires Next.js App Router. Includes a configurable Solana Wallet Adapter provider and is configured for devnet USDC and MagicBlock Private Payments.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/templates/private-transfer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "components/solana-provider.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}
