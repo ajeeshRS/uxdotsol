@@ -8,9 +8,7 @@
       "type": "registry:component",
       "title": "Address Display",
       "description": "Displays a shortened blockchain address with optional copy-to-clipboard support.",
-      "dependencies": [
-        "lucide-react"
-      ],
+      "dependencies": ["lucide-react"],
       "files": [
         {
           "path": "registry/uxdotsol/components/address-display.tsx",
@@ -61,9 +59,7 @@
       "type": "registry:component",
       "title": "NFT Card",
       "description": "Displays NFT artwork, metadata, pricing, and actions in a reusable card.",
-      "dependencies": [
-        "lucide-react"
-      ],
+      "dependencies": ["lucide-react"],
       "files": [
         {
           "path": "registry/uxdotsol/components/nft-card.tsx",
@@ -77,9 +73,7 @@
       "title": "NFT Card Collection",
       "description": "Displays collection artwork, stats, description, and item previews in a reusable card.",
       "dependencies": [],
-      "registryDependencies": [
-        "https://uxdotsol.xyz/r/nft-card.json"
-      ],
+      "registryDependencies": ["https://uxdotsol.xyz/r/nft-card.json"],
       "files": [
         {
           "path": "registry/uxdotsol/components/nft-card-collection.tsx",
@@ -99,9 +93,7 @@
         "recharts",
         "@number-flow/react"
       ],
-      "registryDependencies": [
-        "chart"
-      ],
+      "registryDependencies": ["chart"],
       "envVars": {
         "COINGECKO_API_KEY": "",
         "COINGECKO_API_PLAN": "demo"
@@ -124,10 +116,7 @@
       "type": "registry:component",
       "title": "Token Swap Card",
       "description": "Provides a token swap interface with token inputs, slippage options, and confirmation states.",
-      "dependencies": [
-        "lucide-react",
-        "@number-flow/react"
-      ],
+      "dependencies": ["lucide-react", "@number-flow/react"],
       "files": [
         {
           "path": "registry/uxdotsol/components/token-swap.tsx",
@@ -153,9 +142,7 @@
       "type": "registry:hook",
       "title": "useTokenBalance",
       "description": "Fetches, aggregates, and refreshes precise SPL token balances for a wallet and mint.",
-      "dependencies": [
-        "@solana/web3.js"
-      ],
+      "dependencies": ["@solana/web3.js"],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-token-balance.ts",
@@ -168,9 +155,7 @@
       "type": "registry:hook",
       "title": "useTransactionSimulation",
       "description": "Simulates Solana transactions before requesting a wallet signature.",
-      "dependencies": [
-        "@solana/web3.js"
-      ],
+      "dependencies": ["@solana/web3.js"],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-transaction-simulation.ts",
@@ -183,9 +168,7 @@
       "type": "registry:hook",
       "title": "useSmartRetry",
       "description": "Retries asynchronous Solana operations with configurable backoff and error handling.",
-      "dependencies": [
-        "@solana/web3.js"
-      ],
+      "dependencies": ["@solana/web3.js"],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-smart-retry.ts",
@@ -198,9 +181,7 @@
       "type": "registry:hook",
       "title": "useTransactionStatus",
       "description": "Tracks a Solana transaction signature and exposes confirmation state.",
-      "dependencies": [
-        "@solana/web3.js"
-      ],
+      "dependencies": ["@solana/web3.js"],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-transaction-status.ts",
@@ -239,10 +220,7 @@
       "type": "registry:component",
       "title": "Quick Send Flow",
       "description": "Drop-in SOL send flow with recipient validation, transfer review, wallet approval states, retry handling, and an explorer receipt.",
-      "dependencies": [
-        "lucide-react",
-        "@solana/web3.js"
-      ],
+      "dependencies": ["lucide-react", "@solana/web3.js"],
       "registryDependencies": [
         "https://uxdotsol.xyz/r/use-smart-retry.json",
         "https://uxdotsol.xyz/r/use-transaction-status.json"

@@ -13,11 +13,6 @@
   "registryDependencies": [
     "chart"
   ],
-  "envVars": {
-    "COINGECKO_API_KEY": "",
-    "COINGECKO_API_PLAN": "demo"
-  },
-  "docs": "Requires Next.js App Router. Add a CoinGecko Demo or Pro API key to COINGECKO_API_KEY. Set COINGECKO_API_PLAN=pro when using a Pro key.",
   "files": [
     {
       "path": "registry/uxdotsol/components/coin-price.tsx",
@@ -31,5 +26,10 @@
       "target": "~/app/api/coin-price/route.ts"
     }
   ],
+  "envVars": {
+    "COINGECKO_API_KEY": "",
+    "COINGECKO_API_PLAN": "demo"
+  },
+  "docs": "Requires Next.js App Router. Add a CoinGecko Demo or Pro API key to COINGECKO_API_KEY. Set COINGECKO_API_PLAN=pro when using a Pro key.",
   "type": "registry:component"
 }

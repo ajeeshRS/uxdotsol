@@ -59,6 +59,7 @@ export default function PrivateTransfer() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [confirmedDest, setConfirmedDest] = useState<string | null>(null);
 
   /** Signs, submits, and confirms a transaction built by the API. */
   async function signAndConfirm(payment: PrivatePaymentTxResponse) {
@@ -93,6 +94,7 @@ export default function PrivateTransfer() {
     event.preventDefault();
     setMessage("");
     setIsSuccess(false);
+    setConfirmedDest(null);
 
     const atomics = toUsdcAtomics(amount);
 
@@ -154,6 +156,7 @@ export default function PrivateTransfer() {
       await signAndConfirm(payment);
 
       setIsSuccess(true);
+      setConfirmedDest(destination);
       setMessage("Private USDC payment confirmed on devnet.");
       setAmount("");
     } catch (error) {
@@ -168,7 +171,7 @@ export default function PrivateTransfer() {
   const busy = isSending || payments.isLoading;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-50">
+    <div className="min-h-screen w-screen bg-neutral-950 text-neutral-50">
       <nav className="border-b border-white/10">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
           <span className="text-sm font-semibold tracking-tight">
@@ -181,9 +184,15 @@ export default function PrivateTransfer() {
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center px-5 py-12">
         <section className="w-full max-w-90 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-white/8 dark:bg-[#111113] dark:shadow-[0_32px_100px_rgba(0,0,0,0.55)]">
           <div className="border-b border-zinc-100 bg-zinc-50 px-4.5 py-4 dark:border-white/6 dark:bg-[#17171a]">
-            <h1 className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Send private USDC
-            </h1>
+            <div className="flex items-center justify-between gap-2">
+              <h1 className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                Send private USDC
+              </h1>
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-500 dark:border-amber-400/30 dark:bg-amber-400/8 dark:text-amber-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Devnet
+              </span>
+            </div>
           </div>
 
           <form onSubmit={sendPayment} className="space-y-4 p-4.5">
@@ -244,16 +253,44 @@ export default function PrivateTransfer() {
             </button>
 
             {message ? (
-              <p
-                role={isSuccess ? "status" : "alert"}
-                className={`rounded-xl px-3 py-2 text-xs font-medium ${
-                  isSuccess
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-                    : "bg-red-50 text-red-500 dark:bg-red-500/8 dark:text-red-400"
-                }`}
-              >
-                {message}
-              </p>
+              <div className="space-y-2">
+                <p
+                  role={isSuccess ? "status" : "alert"}
+                  className={`rounded-xl px-3 py-2 text-xs font-medium ${
+                    isSuccess
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                      : "bg-red-50 text-red-500 dark:bg-red-500/8 dark:text-red-400"
+                  }`}
+                >
+                  {message}
+                </p>
+                {isSuccess && confirmedDest ? (
+                  <a
+                    href={`https://solscan.io/account/${confirmedDest}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-[12.5px] font-semibold text-zinc-600 transition-colors hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-white/8 dark:bg-white/3 dark:text-zinc-400 dark:hover:border-white/12 dark:hover:bg-white/6 dark:hover:text-zinc-200"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    View recipient on Solscan
+                  </a>
+                ) : null}
+              </div>
             ) : null}
           </form>
         </section>
