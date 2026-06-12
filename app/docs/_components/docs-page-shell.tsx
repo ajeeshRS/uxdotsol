@@ -133,11 +133,7 @@ export function DocsPageShell({
           doc.usage.map((snippet: string, idx: number) => {
             let label = "usage";
             if (slug === "connect-wallet-btn") {
-              if (idx === 0) label = "usage";
-              else label =
-                ["solana-provider.tsx", "app/api/wallet-account/route.ts", ".env.local"][
-                  idx - 1
-                ] || "usage";
+              label = ["usage", ".env.local"][idx] || "usage";
             }
             if (slug === "coin-price") {
               label = ["usage", "app/api/coin-price/route.ts", ".env.local"][idx] || "usage";

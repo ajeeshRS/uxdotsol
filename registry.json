@@ -28,10 +28,14 @@
         "@solana/wallet-adapter-react",
         "@solana/web3.js"
       ],
-      "docs": "Requires a Solana Wallet Adapter provider in the application tree. This item also installs a Next.js App Router route at app/api/wallet-account/route.ts.",
+      "docs": "Installs a configurable Solana Wallet Adapter provider and a Next.js App Router route at app/api/wallet-account/route.ts. Mount SolanaProvider in the application tree.",
       "files": [
         {
           "path": "registry/uxdotsol/components/connect-wallet-btn.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "components/solana-provider.tsx",
           "type": "registry:component"
         },
         {
