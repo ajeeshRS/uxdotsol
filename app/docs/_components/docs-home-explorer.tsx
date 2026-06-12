@@ -288,7 +288,7 @@ export function DocsHomeExplorer() {
                   return (
                     <div
                       key={item.name}
-                      className={`group relative flex cursor-pointer overflow-hidden rounded-[30px] border border-[#f4f4f4] bg-white p-5 transition-[border-color,transform] duration-300 ease-in-out hover:-translate-y-1 hover:border-[#eaeaea] dark:border-[#141414] dark:bg-neutral-950 dark:hover:border-[#1c1c1c] sm:p-6 ${
+                      className={`group relative flex cursor-pointer overflow-hidden rounded-[30px] border border-[#f4f4f4] bg-white p-5 transition-[translate,border-color] duration-300 ease-in-out hover:-translate-y-1 hover:border-[#eaeaea] dark:border-[#141414] dark:bg-neutral-950 dark:hover:border-[#1c1c1c] sm:p-6 ${
                         isComponent ? "min-h-100" : "min-h-90"
                       }`}
                     >
