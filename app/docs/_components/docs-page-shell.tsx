@@ -136,7 +136,7 @@ export function DocsPageShell({
               label = ["usage", ".env.local"][idx] || "usage";
             }
             if (slug === "coin-price") {
-              label = ["usage", "app/api/coin-price/route.ts", ".env.local"][idx] || "usage";
+              label = ["usage", ".env.local"][idx] || "usage";
             }
             return (
               <TerminalCodeBlock
