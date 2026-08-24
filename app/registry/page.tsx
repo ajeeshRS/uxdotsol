@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Registry | UX.SOL",
   description:
     "Search installable UX.SOL components, hooks, flows, and templates.",
+  alternates: { canonical: "/registry" },
 };
 
 export default function RegistryPage() {

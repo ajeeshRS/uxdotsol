@@ -23,29 +23,35 @@ export function Footer() {
             </p>
 
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <Link href="/registry" className="btn-primary whitespace-nowrap">
+              <Link href="/registry" className="btn-primary w-full whitespace-nowrap sm:w-auto">
                 Browse registry
               </Link>
               <nav
                 aria-label="Footer navigation"
-                className="flex items-center gap-2 text-sm font-medium"
+                className="flex w-full items-center justify-between gap-2 text-sm font-medium sm:w-auto sm:justify-start"
                 style={{ color: "var(--text-secondary)" }}
               >
                 <Link
                   href="/docs"
-                  className="inline-flex min-h-11 items-center rounded-lg px-3 transition-colors hover:bg-(--surface-secondary) hover:text-(--text-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="inline-flex min-h-11 items-center rounded-lg px-3 transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-(--surface-secondary) hover:text-(--text-primary) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
                 >
                   Docs
                 </Link>
                 <a
+                  href="/llms.txt"
+                  className="inline-flex min-h-11 items-center rounded-lg px-3 transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-(--surface-secondary) hover:text-(--text-primary) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
+                >
+                  For agents
+                </a>
+                <a
                   href="https://github.com/ajeeshRS/uxdotsol"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-11 items-center rounded-lg px-3 transition-colors hover:bg-(--surface-secondary) hover:text-(--text-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="inline-flex min-h-11 items-center rounded-lg px-3 transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-(--surface-secondary) hover:text-(--text-primary) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
                 >
                   GitHub
                 </a>
-                <ThemeToggle/>
+                <ThemeToggle />
               </nav>
             </div>
           </div>

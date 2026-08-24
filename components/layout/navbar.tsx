@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "motion/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FaGithub } from "react-icons/fa6";
 import { SearchCommand } from "@/components/layout/search-command";
@@ -10,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const reduceMotion = useReducedMotion();
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isDocsRoute =
@@ -21,6 +24,7 @@ export function Navbar() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -28,8 +32,8 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "z-50 w-full transition-[background-color,backdrop-filter] duration-300",
-        isHome ? "relative" : "sticky top-0",
+        "z-50 w-full transition-[background-color,backdrop-filter] duration-200 ease-[var(--ease-out)]",
+        "sticky top-0",
         scrolled
           ? isHome
             ? "bg-transparent"
@@ -38,26 +42,58 @@ export function Navbar() {
       )}
       style={{ height: "72px" }}
     >
-      <div className="container mx-auto flex h-full max-w-300 items-center px-4 sm:px-8">
+      <div className="mx-auto flex h-full w-full items-center px-4 sm:px-8">
+        <motion.div
+          initial={false}
+          animate={{
+            maxWidth: isHome ? (scrolled ? 1280 : 1120) : 1280,
+          }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { type: "spring", duration: 0.5, bounce: 0.2 }
+          }
+          className={cn(
+            "mx-auto flex w-full items-center",
+            isHome
+              ? "h-14 rounded-2xl bg-black/35 px-3 shadow-[0_12px_36px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4"
+              : "h-full",
+          )}
+        >
+          <div className="flex h-full w-full items-center">
         <Link
           href="/"
           aria-label="UX.SOL home"
-          className="mr-2 flex min-h-11 shrink-0 items-center gap-2 rounded-lg pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:mr-6"
+          className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg pr-2 transition-transform duration-150 ease-[var(--ease-out)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent motion-reduce:transform-none"
         >
-          <div
-            aria-hidden="true"
-            className="flex h-6 w-6 items-center justify-center rounded-md"
-            style={{
-              background: isHome
-                ? "rgba(255,255,255,0.95)"
-                : "var(--text-primary)",
-            }}
-          >
-            <div
-              className="h-2 w-2 rounded-full"
-              style={{ background: isHome ? "#0a0a0a" : "var(--bg-primary)" }}
-            />
-          </div>
+          <span aria-hidden="true" className="relative block size-7 overflow-hidden">
+            {isHome ? (
+              <Image
+                src="/uxsol-logo-on-dark.png"
+                alt=""
+                fill
+                sizes="28px"
+                className="object-cover"
+              />
+            ) : (
+              <>
+                <Image
+                  src="/uxsol-logo-on-light.png"
+                  alt=""
+                  fill
+                  sizes="28px"
+                  className="object-cover dark:hidden"
+                />
+                <Image
+                  src="/uxsol-logo-on-dark.png"
+                  alt=""
+                  fill
+                  sizes="28px"
+                  className="hidden object-cover dark:block"
+                />
+              </>
+            )}
+          </span>
           <span
             className="font-semibold text-sm tracking-tight"
             style={{ color: isHome ? "rgba(255,255,255,0.95)" : "var(--text-primary)" }}
@@ -66,10 +102,11 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav
-          className="flex items-center gap-0.5 sm:gap-1"
-          aria-label="Primary navigation"
-        >
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
+          <nav
+            className="flex items-center gap-0.5 sm:gap-1"
+            aria-label="Primary navigation"
+          >
           {navItems.map((item) => {
             const isActive =
               item.href === "/docs"
@@ -82,7 +119,7 @@ export function Navbar() {
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:px-3",
+                  "inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent motion-reduce:transform-none sm:px-3",
                   isHome
                     ? "text-white/70 hover:bg-white/10 hover:text-white"
                     : "text-(--text-secondary) hover:bg-(--surface-secondary) hover:text-(--text-primary)",
@@ -96,9 +133,9 @@ export function Navbar() {
               </Link>
             );
           })}
-        </nav>
+          </nav>
 
-        <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
           {!isHome && (
             <div className="hidden lg:block">
               <SearchCommand />
@@ -112,7 +149,7 @@ export function Navbar() {
             aria-label="Open UX.SOL on GitHub"
             title="GitHub"
             className={cn(
-              "inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+              "inline-flex h-11 w-11 items-center justify-center rounded-lg transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent motion-reduce:transform-none",
               isHome
                 ? "hover:bg-white/10"
                 : "hover:bg-(--surface-secondary)",
@@ -123,7 +160,10 @@ export function Navbar() {
           </Link>
 
           {isDocsRoute && <ThemeToggle />}
+          </div>
         </div>
+          </div>
+        </motion.div>
       </div>
     </header>
   );

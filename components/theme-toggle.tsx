@@ -33,16 +33,31 @@ export function ThemeToggle() {
       id="theme-toggle"
       type="button"
       onClick={() => setTheme(nextTheme)}
-      className="link-muted relative inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-[var(--surface-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="link-muted relative inline-flex h-11 w-11 items-center justify-center rounded-lg transition-[background-color,color,border-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[var(--surface-secondary)] active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
       style={{ border: "1px solid var(--border-default)" }}
       aria-label={`Switch to ${nextTheme} theme`}
       title={`Switch to ${nextTheme} theme`}
     >
-      {resolvedTheme === "dark" ? (
-        <Sun className="h-4 w-4" aria-hidden="true" />
-      ) : (
-        <Moon className="h-4 w-4" aria-hidden="true" />
-      )}
+      <span
+        aria-hidden="true"
+        className={`absolute transition-[opacity,transform,filter] duration-150 ease-[var(--ease-out)] motion-reduce:transform-none motion-reduce:blur-0 ${
+          resolvedTheme === "dark"
+            ? "rotate-0 scale-100 opacity-100 blur-0"
+            : "-rotate-45 scale-95 opacity-0 blur-[2px]"
+        }`}
+      >
+        <Sun className="h-4 w-4" />
+      </span>
+      <span
+        aria-hidden="true"
+        className={`absolute transition-[opacity,transform,filter] duration-150 ease-[var(--ease-out)] motion-reduce:transform-none motion-reduce:blur-0 ${
+          resolvedTheme === "dark"
+            ? "rotate-45 scale-95 opacity-0 blur-[2px]"
+            : "rotate-0 scale-100 opacity-100 blur-0"
+        }`}
+      >
+        <Moon className="h-4 w-4" />
+      </span>
     </button>
   );
 }
