@@ -11,7 +11,15 @@
  * @module uxdotsol/components/connect-wallet-btn
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { createPortal } from "react-dom";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
@@ -27,6 +35,11 @@ import {
 
 const MOBILE_USER_AGENT_RE =
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+
+const subscribeToHydration = () => () => {};
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+const getEmptyWalletSnapshot = () => "";
 
 type ClusterValue = "mainnet-beta" | "devnet" | "testnet";
 
@@ -110,6 +123,8 @@ export interface ConnectWalletBtnProps {
   onMenuToggle?: (open: boolean) => void;
   /** Optional Tailwind / CSS class applied to the outermost flex wrapper. */
   className?: string;
+  /** Whether to render the mobile navigation toggle beside the wallet control. */
+  showMenuToggle?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -140,9 +155,17 @@ export function ConnectWalletBtn({
   menuOpen = false,
   onMenuToggle,
   className = "",
+  showMenuToggle = true,
 }: ConnectWalletBtnProps) {
-  const { wallet, wallets, connected, publicKey, disconnect, select, connect } =
-    useWallet();
+  const {
+    wallet,
+    wallets,
+    connected: contextConnected,
+    publicKey: contextPublicKey,
+    disconnect,
+    select,
+    connect,
+  } = useWallet();
 
   // ---------------------------------------------------------------------------
   // Local state
@@ -150,6 +173,10 @@ export function ConnectWalletBtn({
 
   /** Controls visibility of the connected-account dropdown. */
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const [accountDropdownPosition, setAccountDropdownPosition] = useState({
+    left: 0,
+    top: 0,
+  });
   /** Controls visibility of the wallet selection modal. */
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   /** Whether the copy-address confirmation is currently active. */
@@ -181,13 +208,96 @@ export function ConnectWalletBtn({
 
   /** Used by the outside-click handler to detect clicks outside the dropdown. */
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
   /** Pending timeout ID for the copy confirmation reset — cancelled on unmount. */
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountCacheRef = useRef(new Map<string, WalletAccountState>());
   const handledRefreshNonceRef = useRef(refreshNonce);
   const connectionAttemptRef = useRef(0);
   const activeConnectionAttemptRef = useRef<number | null>(null);
-  const explorerUrl = publicKey ? getExplorerUrl(publicKey.toBase58(), cluster) : null;
+  const subscribeToWalletAdapter = useCallback(
+    (notify: () => void) => {
+      const adapter = wallet?.adapter;
+      if (!adapter) return () => {};
+
+      adapter.on("connect", notify);
+      adapter.on("disconnect", notify);
+
+      return () => {
+        adapter.off("connect", notify);
+        adapter.off("disconnect", notify);
+      };
+    },
+    [wallet?.adapter],
+  );
+  const getWalletAdapterSnapshot = useCallback(() => {
+    const adapter = wallet?.adapter;
+    return adapter?.connected && adapter.publicKey
+      ? adapter.publicKey.toBase58()
+      : "";
+  }, [wallet?.adapter]);
+  const adapterAddress = useSyncExternalStore(
+    subscribeToWalletAdapter,
+    getWalletAdapterSnapshot,
+    getEmptyWalletSnapshot,
+  );
+  const walletAddress = wallet?.adapter
+    ? adapterAddress
+    : contextPublicKey?.toBase58() || "";
+  const connected = wallet?.adapter
+    ? Boolean(adapterAddress)
+    : contextConnected && Boolean(walletAddress);
+  const explorerUrl = walletAddress
+    ? getExplorerUrl(walletAddress, cluster)
+    : null;
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const portalRoot = isHydrated ? document.body : null;
+
+  const updateAccountDropdownPosition = useCallback(() => {
+    const trigger = dropdownTriggerRef.current;
+    if (!trigger) return;
+
+    const viewportPadding = 12;
+    const gap = 10;
+    const triggerRect = trigger.getBoundingClientRect();
+    const panelWidth =
+      dropdownPanelRef.current?.offsetWidth ||
+      Math.min(320, window.innerWidth - viewportPadding * 2);
+    const panelHeight = dropdownPanelRef.current?.offsetHeight || 420;
+    const maxLeft = Math.max(
+      viewportPadding,
+      window.innerWidth - panelWidth - viewportPadding,
+    );
+    const left = Math.min(
+      Math.max(viewportPadding, triggerRect.right - panelWidth),
+      maxLeft,
+    );
+    const spaceBelow = window.innerHeight - triggerRect.bottom - gap;
+    const top =
+      spaceBelow >= panelHeight || triggerRect.top < panelHeight + gap
+        ? triggerRect.bottom + gap
+        : triggerRect.top - panelHeight - gap;
+
+    setAccountDropdownPosition({
+      left,
+      top: Math.max(viewportPadding, top),
+    });
+  }, []);
+
+  const handleAccountDropdownToggle = useCallback(() => {
+    if (accountDropdownOpen) {
+      setAccountDropdownOpen(false);
+      return;
+    }
+
+    updateAccountDropdownPosition();
+    setAccountDropdownOpen(true);
+  }, [accountDropdownOpen, updateAccountDropdownPosition]);
 
   // ---------------------------------------------------------------------------
   // Effects
@@ -207,9 +317,11 @@ export function ConnectWalletBtn({
    */
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(target) &&
+        !dropdownPanelRef.current?.contains(target)
       ) {
         setAccountDropdownOpen(false);
       }
@@ -217,6 +329,18 @@ export function ConnectWalletBtn({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!accountDropdownOpen) return;
+
+    window.addEventListener("resize", updateAccountDropdownPosition);
+    window.addEventListener("scroll", updateAccountDropdownPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateAccountDropdownPosition);
+      window.removeEventListener("scroll", updateAccountDropdownPosition, true);
+    };
+  }, [accountDropdownOpen, updateAccountDropdownPosition]);
 
   /**
    * While the wallet modal is open:
@@ -239,10 +363,10 @@ export function ConnectWalletBtn({
   }, [walletModalOpen]);
 
   useEffect(() => {
-    if (!connected || !publicKey || !accountDropdownOpen) return;
+    if (!connected || !walletAddress || !accountDropdownOpen) return;
 
     let cancelled = false;
-    const cacheKey = `${publicKey.toBase58()}:${cluster}`;
+    const cacheKey = `${walletAddress}:${cluster}`;
     const cachedState = accountCacheRef.current.get(cacheKey);
     const isManualRefresh = refreshNonce !== handledRefreshNonceRef.current;
     handledRefreshNonceRef.current = refreshNonce;
@@ -255,13 +379,13 @@ export function ConnectWalletBtn({
     }
 
     async function loadAccountState() {
-      if (!publicKey) return;
+      if (!walletAddress) return;
       setAccountLoading(true);
       setAccountError(null);
 
       try {
         const url = new URL("/api/wallet-account", window.location.origin);
-        url.searchParams.set("address", publicKey.toBase58());
+        url.searchParams.set("address", walletAddress);
         url.searchParams.set("cluster", cluster);
 
         const response = await fetch(url);
@@ -296,7 +420,7 @@ export function ConnectWalletBtn({
     return () => {
       cancelled = true;
     };
-  }, [accountDropdownOpen, cluster, connected, publicKey, refreshNonce]);
+  }, [accountDropdownOpen, cluster, connected, walletAddress, refreshNonce]);
 
   useEffect(() => {
     if (
@@ -350,16 +474,16 @@ export function ConnectWalletBtn({
    * and activates a brief ✓ confirmation for 1.5 seconds.
    */
   const handleCopy = useCallback(async () => {
-    if (!publicKey) return;
+    if (!walletAddress) return;
     try {
-      await navigator.clipboard.writeText(publicKey.toBase58());
+      await navigator.clipboard.writeText(walletAddress);
       setIsCopied(true);
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       copyTimerRef.current = setTimeout(() => setIsCopied(false), 1500);
     } catch (err) {
       console.error("Failed to copy:", err);
     }
-  }, [publicKey]);
+  }, [walletAddress]);
 
   /**
    * Wallets that are already installed in the browser (ready to connect).
@@ -385,10 +509,10 @@ export function ConnectWalletBtn({
    */
   const truncated = useMemo(
     () =>
-      publicKey
-        ? publicKey.toBase58().slice(0, 4) + "···" + publicKey.toBase58().slice(-4)
+      walletAddress
+        ? walletAddress.slice(0, 4) + "···" + walletAddress.slice(-4)
         : "",
-    [publicKey],
+    [walletAddress],
   );
 
   /**
@@ -433,8 +557,9 @@ export function ConnectWalletBtn({
           <div className="relative z-40" ref={dropdownRef}>
             {/* Trigger button */}
             <button
+              ref={dropdownTriggerRef}
               type="button"
-              onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+              onClick={handleAccountDropdownToggle}
               aria-expanded={accountDropdownOpen}
               aria-haspopup="true"
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/7 border border-zinc-200 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/11 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
@@ -463,11 +588,17 @@ export function ConnectWalletBtn({
             </button>
 
             {/* Account dropdown */}
-            {accountDropdownOpen && (
-              <div
-                className="absolute right-0 top-[calc(100%+10px)] w-80 rounded-2xl border border-zinc-200 dark:border-white/8 bg-white dark:bg-[#111113] shadow-lg dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)] overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
-                role="menu"
-              >
+            {portalRoot
+              ? createPortal(
+                  <div
+                    ref={dropdownPanelRef}
+                    data-state={accountDropdownOpen ? "open" : "closed"}
+                    aria-hidden={!accountDropdownOpen}
+                    inert={!accountDropdownOpen}
+                    className="fixed z-[60] max-h-[calc(100dvh-1.5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-2xl border border-zinc-200 dark:border-white/8 bg-white dark:bg-[#111113] shadow-lg dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)] origin-top-right data-[state=open]:visible data-[state=open]:opacity-100 data-[state=open]:translate-y-0 data-[state=open]:scale-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 data-[state=closed]:-translate-y-1 data-[state=closed]:scale-[0.97] [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),transform_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),transform_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_150ms] motion-reduce:data-[state=closed]:translate-y-0 motion-reduce:data-[state=closed]:scale-100 motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
+                    style={accountDropdownPosition}
+                    role="menu"
+                  >
                 {/* Panel header */}
                 <div className="flex flex-col items-center gap-2.5 px-4 pt-5 pb-4 bg-zinc-50 dark:bg-[#17171a] border-b border-zinc-100 dark:border-white/6">
                   <div className="flex items-center justify-center w-11 h-11 rounded-[14px] overflow-hidden border border-zinc-200 dark:border-white/10 shrink-0">
@@ -545,15 +676,15 @@ export function ConnectWalletBtn({
                       >
                         <RefreshCw
                           size={13}
-                          className={accountLoading ? "animate-spin" : ""}
+                          className={accountLoading ? "motion-safe:animate-spin" : ""}
                         />
                       </button>
                     </div>
 
                     {accountLoading ? (
                       <div className="mt-2 space-y-2">
-                        <div className="h-7 w-24 animate-pulse rounded-md bg-zinc-200 dark:bg-white/10" />
-                        <div className="h-3 w-36 animate-pulse rounded-md bg-zinc-200 dark:bg-white/10" />
+                        <div className="h-7 w-24 motion-safe:animate-pulse rounded-md bg-zinc-200 dark:bg-white/10" />
+                        <div className="h-3 w-36 motion-safe:animate-pulse rounded-md bg-zinc-200 dark:bg-white/10" />
                       </div>
                     ) : accountError ? (
                       <div className="mt-2 flex items-center justify-between gap-3">
@@ -648,8 +779,10 @@ export function ConnectWalletBtn({
                     Disconnect
                   </button>
                 </div>
-              </div>
-            )}
+                  </div>,
+                  portalRoot,
+                )
+              : null}
           </div>
         ) : (
           /* ── Disconnected state ── */
@@ -665,30 +798,35 @@ export function ConnectWalletBtn({
         )}
 
         {/* ── Mobile menu toggle ── */}
-        <button
-          type="button"
-          onClick={() => onMenuToggle?.(!menuOpen)}
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={menuOpen}
-          className="md:hidden flex items-center justify-center w-9.5 h-9.5 rounded-[10px] bg-zinc-100 dark:bg-white/7 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/11 hover:text-zinc-800 dark:hover:text-zinc-100 transition-colors duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
-        >
-          {menuOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
+        {showMenuToggle ? (
+          <button
+            type="button"
+            onClick={() => onMenuToggle?.(!menuOpen)}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            className="md:hidden flex items-center justify-center w-9.5 h-9.5 rounded-[10px] bg-zinc-100 dark:bg-white/7 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/11 hover:text-zinc-800 dark:hover:text-zinc-100 transition-colors duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        ) : null}
       </div>
 
       {/* ── Wallet selection modal ── */}
-      {walletModalOpen && (
+      {portalRoot ? createPortal(<div
+        data-state={walletModalOpen ? "open" : "closed"}
+        aria-hidden={!walletModalOpen}
+        inert={!walletModalOpen}
+        className="fixed inset-0 z-40 flex items-center justify-center px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md data-[state=open]:visible data-[state=open]:opacity-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_200ms] motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
+        onClick={() => setWalletModalOpen(false)}
+      >
         <div
-          className="fixed inset-0 z-40 flex items-center justify-center px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
-          onClick={() => setWalletModalOpen(false)}
+          data-state={walletModalOpen ? "open" : "closed"}
+          className="relative w-full max-w-90 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/8 shadow-xl dark:shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden origin-center data-[state=open]:opacity-100 data-[state=open]:translate-y-0 data-[state=open]:scale-100 data-[state=closed]:opacity-0 data-[state=closed]:translate-y-2 data-[state=closed]:scale-[0.97] [transition:opacity_200ms_cubic-bezier(0.23,1,0.32,1),transform_200ms_cubic-bezier(0.23,1,0.32,1)] motion-reduce:data-[state=closed]:translate-y-0 motion-reduce:data-[state=closed]:scale-100 motion-reduce:[transition:opacity_200ms_ease]"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Connect Wallet"
         >
-          <div
-            className="relative w-full max-w-90 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/8 shadow-xl dark:shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-3 duration-200"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Connect Wallet"
-          >
             {/* Modal header */}
             <div className="flex items-center justify-between px-4.5 py-4 bg-zinc-50 dark:bg-[#17171a] border-b border-zinc-100 dark:border-white/6">
               <h2 className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -769,7 +907,7 @@ export function ConnectWalletBtn({
                                 stroke="#818cf8"
                                 strokeWidth="2.5"
                                 strokeLinecap="round"
-                                className="shrink-0 animate-spin"
+                                className="shrink-0 motion-safe:animate-spin"
                               >
                                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                               </svg>
@@ -840,9 +978,8 @@ export function ConnectWalletBtn({
                 Use the account menu to copy your address, switch wallets, or open Explorer.
               </p>
             </div>
-          </div>
         </div>
-      )}
+      </div>, portalRoot) : null}
     </>
   );
 }

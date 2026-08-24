@@ -3,16 +3,13 @@
 /**
  * @file TokenSwapCard — A self-contained token swap widget for Solana dApps.
  *
- * Includes a token selector dropdown, amount input with USD conversion,
- * a flip button to reverse the pair, and an animated swap confirmation flow.
- *
- * All price data is static and provided for demonstration. In production,
- * wire `tokens` and `onSwap` to a live aggregator (e.g. Jupiter, Raydium).
+ * Includes a token selector dropdown, amount input with optional USD conversion,
+ * a flip button to reverse the pair, and callback-driven swap execution states.
  *
  * @module uxdotsol/components/token-swap
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import {
   ArrowUpDown,
@@ -64,14 +61,14 @@ export interface TokenSwapCardProps {
   rateLabel?: string;
   /**
    * Network fee string shown in the footer.
-   * @default "~0.000005 SOL"
+   * @default "Calculated at signing"
    */
   networkFee?: string;
   /**
-   * Callback fired after the simulated swap completes.
-   * In production, perform the actual transaction here.
+   * Required to enable execution. Resolve only after the real swap operation
+   * reaches the success boundary your product promises to users.
    */
-  onSwap?: (from: Token, to: Token, amount: string) => void;
+  onSwap?: (from: Token, to: Token, amount: string) => void | Promise<void>;
   /** Optional Tailwind / CSS class forwarded to the card root element. */
   className?: string;
 }
@@ -100,17 +97,15 @@ const TOKEN_LOGO_URLS: Record<string, string> = {
 };
 
 /**
- * Demo token list used when no `tokens` prop is supplied.
- *
- * @internal Replace with live token registry in production.
+ * Known token options used when no token source is supplied. Dynamic balances
+ * and prices are intentionally omitted rather than fabricated.
  */
 const DEFAULT_TOKENS: Token[] = [
-  { symbol: "SOL", name: "Solana", balance: "12.500", usdPrice: 142.3 },
-  { symbol: "USDC", name: "USD Coin", balance: "320.00", usdPrice: 1.0 },
-  { symbol: "ETH", name: "Ethereum", balance: "0.842", usdPrice: 3241.5 },
-  { symbol: "RAY", name: "Raydium", balance: "45.20", usdPrice: 2.14 },
-  { symbol: "BONK", name: "Bonk", balance: "1,200,000", usdPrice: 0.000021 },
-  { symbol: "USDT", name: "Tether", balance: "150.00", usdPrice: 1.0 },
+  { symbol: "SOL", name: "Solana" },
+  { symbol: "USDC", name: "USD Coin" },
+  { symbol: "RAY", name: "Raydium" },
+  { symbol: "BONK", name: "Bonk" },
+  { symbol: "USDT", name: "Tether" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -142,6 +137,9 @@ function TokenLogo({ token, size = 22 }: { token: Token; size?: number }) {
       <img
         src={logoUrl}
         alt={token.symbol}
+        width={size}
+        height={size}
+        loading="lazy"
         onError={() => setImgError(true)}
         className="rounded-full shrink-0 object-cover"
         style={{ width: size, height: size }}
@@ -186,7 +184,23 @@ function TokenSelector({
   exclude,
 }: TokenSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const listboxId = useId();
+  const availableTokens = useMemo(
+    () => tokens.filter((token) => token.symbol !== exclude?.symbol),
+    [exclude?.symbol, tokens],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => {
+      optionRefs.current[activeIndex]?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeIndex, open]);
 
   // Close the dropdown when a click lands outside this component's root.
   useEffect(() => {
@@ -199,15 +213,85 @@ function TokenSelector({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const openAt = useCallback(
+    (index: number) => {
+      const lastIndex = Math.max(availableTokens.length - 1, 0);
+      setActiveIndex(Math.min(Math.max(index, 0), lastIndex));
+      setOpen(true);
+    },
+    [availableTokens.length],
+  );
+
+  const handleTriggerKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const selectedIndex = availableTokens.findIndex(
+        (token) => token.symbol === selected.symbol,
+      );
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        openAt(selectedIndex >= 0 ? selectedIndex : 0);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        openAt(selectedIndex >= 0 ? selectedIndex : availableTokens.length - 1);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        openAt(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        openAt(availableTokens.length - 1);
+      }
+    },
+    [availableTokens, openAt, selected.symbol],
+  );
+
+  const handleListboxKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const lastIndex = availableTokens.length - 1;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveIndex((index) => (index >= lastIndex ? 0 : index + 1));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveIndex((index) => (index <= 0 ? lastIndex : index - 1));
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setActiveIndex(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setActiveIndex(lastIndex);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+      } else if (event.key === "Tab") {
+        setOpen(false);
+      }
+    },
+    [availableTokens.length],
+  );
+
   return (
     <div ref={ref} className="relative shrink-0">
       {/* Pill trigger */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          const selectedIndex = availableTokens.findIndex(
+            (token) => token.symbol === selected.symbol,
+          );
+          openAt(selectedIndex >= 0 ? selectedIndex : 0);
+        }}
+        onKeyDown={handleTriggerKeyDown}
         className="flex min-h-10 items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/8 hover:bg-zinc-200 dark:hover:bg-white/13 transition-colors duration-150 cursor-pointer border border-black/6 dark:border-white/8 shadow-[0_1px_4px_rgba(0,0,0,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-label={`Select ${selected.symbol} token`}
       >
         <TokenLogo token={selected} size={20} />
         <span className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
@@ -222,17 +306,25 @@ function TokenSelector({
       {/* Floating dropdown */}
       {open && (
         <div className="absolute top-full right-0 mt-1.5 z-50 w-48 rounded-2xl overflow-hidden bg-white dark:bg-[#111113] border border-black/6 dark:border-white/8 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-          <div className="p-1">
-            {tokens.flatMap((t) =>
-              t.symbol !== exclude?.symbol
-                ? [
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label="Available tokens"
+            onKeyDown={handleListboxKeyDown}
+            className="p-1"
+          >
+            {availableTokens.map((t, index) => (
                     <button
+                      ref={(node) => { optionRefs.current[index] = node; }}
                       type="button"
+                      role="option"
+                      aria-selected={t.symbol === selected.symbol}
                       key={t.symbol}
                       onClick={() => {
                         onChange(t);
                         setOpen(false);
                       }}
+                      onFocus={() => setActiveIndex(index)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors duration-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 dark:focus-visible:ring-zinc-50/15 ${
                         t.symbol === selected.symbol
                           ? "bg-zinc-50 dark:bg-white/4"
@@ -254,12 +346,10 @@ function TokenSelector({
                         </span>
                       )}
                       {t.symbol === selected.symbol && (
-                        <Check size={12} className="text-blue-500 shrink-0" />
+                        <Check size={12} aria-hidden="true" className="text-blue-500 shrink-0" />
                       )}
-                    </button>,
-                  ]
-                : [],
-            )}
+                    </button>
+            ))}
           </div>
         </div>
       )}
@@ -333,6 +423,8 @@ function AmountPanel({
         {editable ? (
           <input
             type="number"
+            name={label === "You pay" ? "pay-amount" : "receive-amount"}
+            autoComplete="off"
             inputMode="decimal"
             placeholder="0.00"
             value={amount}
@@ -411,7 +503,7 @@ export function TokenSwapCard({
   defaultTo,
   slippageOptions = [0.1, 0.5, 1.0],
   rateLabel,
-  networkFee = "~0.000005 SOL",
+  networkFee = "Calculated at signing",
   onSwap,
   className = "",
 }: TokenSwapCardProps) {
@@ -421,6 +513,7 @@ export function TokenSwapCard({
   const [slippage, setSlippage] = useState(slippageOptions[1]);
   const [swapping, setSwapping] = useState(false);
   const [swapped, setSwapped] = useState(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
   const isHighSlippage = slippage >= 1;
 
   // --------------- Derived values (recalculated on each render) -------------
@@ -452,7 +545,12 @@ export function TokenSwapCard({
       : rateLabel;
 
   /** Whether the swap button should be enabled. */
-  const canSwap = !!fromAmount && parseFloat(fromAmount) > 0;
+  const canSwap = Boolean(
+    onSwap &&
+      fromAmount &&
+      Number.isFinite(parseFloat(fromAmount)) &&
+      parseFloat(fromAmount) > 0,
+  );
 
   // --------------- Stable callbacks ----------------------------------------
 
@@ -464,22 +562,54 @@ export function TokenSwapCard({
     setFromToken(toToken);
     setToToken(fromToken);
     setFromAmount(toAmount);
+    setSwapped(false);
+    setSwapError(null);
   }, [fromToken, toToken, toAmount]);
 
+  const handleAmountChange = useCallback((value: string) => {
+    setFromAmount(value);
+    setSwapped(false);
+    setSwapError(null);
+  }, []);
+
+  const handleFromTokenChange = useCallback((token: Token) => {
+    setFromToken(token);
+    setSwapped(false);
+    setSwapError(null);
+  }, []);
+
+  const handleToTokenChange = useCallback((token: Token) => {
+    setToToken(token);
+    setSwapped(false);
+    setSwapError(null);
+  }, []);
+
+  const handleSlippageChange = useCallback((value: number) => {
+    setSlippage(value);
+    setSwapped(false);
+    setSwapError(null);
+  }, []);
+
   /**
-   * Simulates a swap with a 1.8s delay, then fires the `onSwap` callback and
-   * shows a success state for 2.5 s.
-   *
-   * Replace the `setTimeout` with an actual transaction call in production.
+   * Delegates execution to the supplied real integration and reflects its
+   * resolved or rejected state without fabricating progress or success.
    */
   const handleSwap = useCallback(async () => {
-    if (!fromAmount || swapping) return;
+    if (!fromAmount || swapping || !onSwap) return;
     setSwapping(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setSwapping(false);
-    setSwapped(true);
-    onSwap?.(fromToken, toToken, fromAmount);
-    setTimeout(() => setSwapped(false), 2500);
+    setSwapped(false);
+    setSwapError(null);
+
+    try {
+      await onSwap(fromToken, toToken, fromAmount);
+      setSwapped(true);
+    } catch (cause) {
+      setSwapError(
+        cause instanceof Error ? cause.message : "The swap operation failed.",
+      );
+    } finally {
+      setSwapping(false);
+    }
   }, [fromAmount, swapping, fromToken, toToken, onSwap]);
 
   return (
@@ -524,7 +654,7 @@ export function TokenSwapCard({
             <button
               type="button"
               key={s}
-              onClick={() => setSlippage(s)}
+              onClick={() => handleSlippageChange(s)}
               className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold tracking-wide transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 dark:focus-visible:ring-zinc-50/15 ${
                 slippage === s
                   ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
@@ -547,13 +677,13 @@ export function TokenSwapCard({
           token={fromToken}
           tokens={tokens}
           amount={fromAmount}
-          onAmountChange={setFromAmount}
-          onTokenChange={setFromToken}
+          onAmountChange={handleAmountChange}
+          onTokenChange={handleFromTokenChange}
           excludeToken={toToken}
           usdValue={fromUsd}
           editable
           onMax={() =>
-            setFromAmount(fromToken.balance?.replace(/,/g, "") ?? "")
+            handleAmountChange(fromToken.balance?.replace(/,/g, "") ?? "")
           }
         />
 
@@ -575,7 +705,7 @@ export function TokenSwapCard({
           token={toToken}
           tokens={tokens}
           amount={toAmount}
-          onTokenChange={setToToken}
+          onTokenChange={handleToTokenChange}
           excludeToken={fromToken}
           editable={false}
         />
@@ -597,6 +727,15 @@ export function TokenSwapCard({
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
             High slippage can materially change your final receive amount.
           </div>
+        ) : null}
+
+        {swapError ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-5 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+          >
+            {swapError}
+          </p>
         ) : null}
 
         {/* Swap button */}
@@ -621,14 +760,16 @@ export function TokenSwapCard({
         >
           {swapping ? (
             <>
-              <Loader2 size={14} className="animate-spin" />
-              Swapping…
+              <Loader2 size={14} className="motion-safe:animate-spin" />
+              Confirm in wallet…
             </>
           ) : swapped ? (
             <>
               <CheckCircle2 size={14} />
-              Swapped!
+              Swap complete
             </>
+          ) : !onSwap ? (
+            "Swap integration required"
           ) : (
             "Swap now"
           )}

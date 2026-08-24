@@ -11,8 +11,10 @@ import {
 import {
   usePrivatePayment,
   type PrivatePaymentTxResponse,
-} from "../hooks/use-private-payment";
-import { ConnectWalletBtn } from "../components/connect-wallet-btn";
+} from "@/hooks/uxdotsol/use-private-payment";
+import { ConnectWalletBtn } from "@/components/uxdotsol/components/connect-wallet-btn";
+import { SafeRecipientField } from "@/components/uxdotsol/components/safe-recipient-field";
+import { TransactionReceipt } from "@/components/uxdotsol/components/transaction-receipt";
 
 const DEVNET_RPC = "https://api.devnet.solana.com";
 const connection = new Connection(DEVNET_RPC, "confirmed");
@@ -60,6 +62,10 @@ export default function PrivateTransfer() {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [confirmedDest, setConfirmedDest] = useState<string | null>(null);
+  const [confirmedSignature, setConfirmedSignature] = useState<string | null>(
+    null,
+  );
+  const [confirmedAmount, setConfirmedAmount] = useState<string | null>(null);
 
   /** Signs, submits, and confirms a transaction built by the API. */
   async function signAndConfirm(payment: PrivatePaymentTxResponse) {
@@ -95,6 +101,7 @@ export default function PrivateTransfer() {
     setMessage("");
     setIsSuccess(false);
     setConfirmedDest(null);
+    setConfirmedSignature(null);
 
     const atomics = toUsdcAtomics(amount);
 
@@ -153,10 +160,12 @@ export default function PrivateTransfer() {
         cluster: "devnet",
       });
 
-      await signAndConfirm(payment);
+      const signature = await signAndConfirm(payment);
 
       setIsSuccess(true);
       setConfirmedDest(destination);
+      setConfirmedSignature(signature);
+      setConfirmedAmount(amount);
       setMessage("Private USDC payment confirmed on devnet.");
       setAmount("");
     } catch (error) {
@@ -182,7 +191,26 @@ export default function PrivateTransfer() {
       </nav>
 
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center px-5 py-12">
-        <section className="w-full max-w-90 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-white/8 dark:bg-[#111113] dark:shadow-[0_32px_100px_rgba(0,0,0,0.55)]">
+        {confirmedSignature && confirmedDest && confirmedAmount ? (
+          <TransactionReceipt
+            receipt={{
+              signature: confirmedSignature,
+              status: "confirmed",
+              network: { cluster: "devnet" },
+              amount: { value: confirmedAmount, symbol: "USDC" },
+              sender: { label: "Connected wallet", address: walletAddress },
+              recipient: { label: "Recipient", address: confirmedDest },
+            }}
+            onDone={() => {
+              setConfirmedSignature(null);
+              setConfirmedDest(null);
+              setConfirmedAmount(null);
+              setIsSuccess(false);
+              setMessage("");
+            }}
+          />
+        ) : (
+          <section className="w-full max-w-105 overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-[#111113] dark:shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
           <div className="border-b border-zinc-100 bg-zinc-50 px-4.5 py-4 dark:border-white/6 dark:bg-[#17171a]">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -203,17 +231,13 @@ export default function PrivateTransfer() {
               >
                 Recipient
               </label>
-              <input
-                id="destination"
-                name="destination"
-                type="text"
+              <SafeRecipientField
                 value={destination}
-                onChange={(event) => setDestination(event.target.value.trim())}
-                placeholder="Solana wallet address"
-                autoComplete="off"
-                spellCheck={false}
-                required
-                className="min-h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 font-mono text-[13px] text-zinc-900 placeholder:text-zinc-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 dark:border-white/8 dark:bg-white/3 dark:text-zinc-100 dark:placeholder:text-zinc-600 dark:focus-visible:ring-zinc-50/15"
+                onValueChange={setDestination}
+                connection={connection}
+                sender={publicKey}
+                label="Recipient"
+                name="destination"
               />
             </div>
 
@@ -293,7 +317,8 @@ export default function PrivateTransfer() {
               </div>
             ) : null}
           </form>
-        </section>
+          </section>
+        )}
       </main>
     </div>
   );

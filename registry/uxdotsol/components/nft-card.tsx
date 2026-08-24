@@ -19,6 +19,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { Heart, ExternalLink, Tag } from "lucide-react";
 
@@ -33,8 +34,42 @@ import { Heart, ExternalLink, Tag } from "lucide-react";
  * @internal
  */
 const MouseEnterContext = createContext<
-  [boolean, React.Dispatch<React.SetStateAction<boolean>>] | undefined
+  [boolean, React.Dispatch<React.SetStateAction<boolean>>, boolean] | undefined
 >(undefined);
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const COARSE_POINTER_QUERY = "(hover: none), (pointer: coarse)";
+
+function subscribeToTiltPreference(onStoreChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const queries = [
+    window.matchMedia(REDUCED_MOTION_QUERY),
+    window.matchMedia(COARSE_POINTER_QUERY),
+  ];
+
+  queries.forEach((query) => query.addEventListener("change", onStoreChange));
+  return () => {
+    queries.forEach((query) =>
+      query.removeEventListener("change", onStoreChange),
+    );
+  };
+}
+
+function getTiltDisabledSnapshot() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return (
+    window.matchMedia(REDUCED_MOTION_QUERY).matches ||
+    window.matchMedia(COARSE_POINTER_QUERY).matches
+  );
+}
+
+function useTiltDisabled() {
+  return useSyncExternalStore(
+    subscribeToTiltPreference,
+    getTiltDisabledSnapshot,
+    () => false,
+  );
+}
 
 /**
  * Reads the `isMouseEntered` flag from the nearest `TiltContainer`.
@@ -43,15 +78,16 @@ const MouseEnterContext = createContext<
  *
  * @internal
  */
-const useMouseEnter = (): [boolean] => {
+const useMouseEnter = (): [boolean, boolean] => {
   const context = useContext(MouseEnterContext);
-  return [context ? context[0] : false];
+  return context ? [context[0], context[2]] : [false, false];
 };
 
 /** Props for the `TiltContainer` internal component. @internal */
 interface TiltContainerProps {
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
   /**
    * Tilt divisor. A **higher** value produces a **subtler** rotation angle.
    * @default 25
@@ -73,44 +109,96 @@ interface TiltContainerProps {
 const TiltContainer = memo(function TiltContainer({
   children,
   className = "",
+  disabled = false,
   intensity = 25,
 }: TiltContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const boundsRef = useRef<DOMRect | null>(null);
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const frameRef = useRef<number | null>(null);
+  const trackingRef = useRef(false);
   const [isMouseEntered, setIsMouseEntered] = useState(false);
 
-  /**
-   * Computes and applies the rotation transform directly via the DOM ref to
-   * avoid triggering a React re-render on every `mousemove` event (which fires
-   * at 60+ fps and would be extremely expensive with state updates).
-   */
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const { left, top, width, height } =
-      containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - left - width / 2) / intensity;
-    const y = (e.clientY - top - height / 2) / intensity;
-    containerRef.current.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
-  }, [intensity]);
-
-  /** Marks the container as hovered so `TiltItem` children can extend forward. */
-  const handleMouseEnter = useCallback(() => setIsMouseEntered(true), []);
-
-  /** Resets the container transform and the hover state on mouse leave. */
-  const handleMouseLeave = useCallback(() => {
-    if (!containerRef.current) return;
-    setIsMouseEntered(false);
-    containerRef.current.style.transform = "rotateY(0deg) rotateX(0deg)";
+  const refreshBounds = useCallback(() => {
+    if (!trackingRef.current || !containerRef.current) return;
+    boundsRef.current = containerRef.current.getBoundingClientRect();
   }, []);
 
+  useEffect(() => {
+    window.addEventListener("resize", refreshBounds);
+    window.addEventListener("scroll", refreshBounds, true);
+    return () => {
+      window.removeEventListener("resize", refreshBounds);
+      window.removeEventListener("scroll", refreshBounds, true);
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, [refreshBounds]);
+
+  useEffect(() => {
+    if (!disabled || !containerRef.current) return;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    containerRef.current.style.transition = "none";
+    containerRef.current.style.transform = "rotateY(0deg) rotateX(0deg)";
+  }, [disabled]);
+
+  const handlePointerEnter = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    trackingRef.current = true;
+    boundsRef.current = container.getBoundingClientRect();
+    container.style.transition = "none";
+    setIsMouseEntered(!disabled);
+  }, [disabled]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled || !trackingRef.current || !boundsRef.current) return;
+    pointerRef.current = { x: e.clientX, y: e.clientY };
+    if (frameRef.current !== null) return;
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const container = containerRef.current;
+      const bounds = boundsRef.current;
+      if (!container || !bounds || !trackingRef.current) return;
+
+      const rotateY =
+        (pointerRef.current.x - bounds.left - bounds.width / 2) / intensity;
+      const rotateX =
+        -(pointerRef.current.y - bounds.top - bounds.height / 2) / intensity;
+      container.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+    });
+  }, [disabled, intensity]);
+
+  const handlePointerLeave = useCallback(() => {
+    const container = containerRef.current;
+    trackingRef.current = false;
+    boundsRef.current = null;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    setIsMouseEntered(false);
+    if (!container) return;
+    container.style.transition = disabled
+      ? "none"
+      : "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)";
+    container.style.transform = "rotateY(0deg) rotateX(0deg)";
+  }, [disabled]);
+
   return (
-    <MouseEnterContext.Provider value={[isMouseEntered, setIsMouseEntered]}>
+    <MouseEnterContext.Provider
+      value={[isMouseEntered && !disabled, setIsMouseEntered, disabled]}
+    >
       <div style={{ perspective: "1000px" }}>
         <div
           ref={containerRef}
-          onMouseEnter={handleMouseEnter}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          className={`relative transition-transform duration-200 ease-linear ${className}`}
+          onPointerEnter={handlePointerEnter}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          className={`relative ${className}`}
           style={{ transformStyle: "preserve-3d" }}
         >
           {children}
@@ -145,17 +233,20 @@ interface TiltItemProps {
 const TiltItem = memo(function TiltItem({ children, className = "", translateZ = 0 }: TiltItemProps) {
   const ref = useRef<HTMLDivElement>(null);
   /** Safely reads `isMouseEntered`; returns `false` outside a provider. */
-  const [isMouseEntered] = useMouseEnter();
+  const [isMouseEntered, disabled] = useMouseEnter();
 
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.style.transform = isMouseEntered
+    ref.current.style.transition = disabled || isMouseEntered
+      ? "none"
+      : "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)";
+    ref.current.style.transform = !disabled && isMouseEntered
       ? `translateZ(${translateZ}px)`
       : "translateZ(0px)";
-  }, [isMouseEntered, translateZ]);
+  }, [disabled, isMouseEntered, translateZ]);
 
   return (
-    <div ref={ref} className={`transition-transform duration-200 ease-linear ${className}`}>
+    <div ref={ref} className={className}>
       {children}
     </div>
   );
@@ -251,6 +342,7 @@ export function NFTCard({
   const [liked, setLiked] = useState(false);
   /** Current displayed like count (initialised from the `likes` prop). */
   const [likeCount, setLikeCount] = useState(likes ?? 0);
+  const tiltDisabled = useTiltDisabled();
 
   /**
    * Toggles the liked state and increments / decrements the count.
@@ -272,7 +364,15 @@ export function NFTCard({
       <img
         src={image}
         alt={name}
-        className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+        className={`object-cover w-full h-full ${
+          tiltDisabled ? "" : "group-hover:[transform:scale(1.05)]"
+        }`}
+        style={{
+          transform: tiltDisabled ? "scale(1)" : undefined,
+          transition: tiltDisabled
+            ? "none"
+            : "transform 180ms cubic-bezier(0.23, 1, 0.32, 1)",
+        }}
       />
       <button
         type="button"
@@ -425,7 +525,7 @@ export function NFTCard({
 
   if (tilt) {
     return (
-      <TiltContainer intensity={tiltIntensity}>
+      <TiltContainer intensity={tiltIntensity} disabled={tiltDisabled}>
         {cardInner}
       </TiltContainer>
     );

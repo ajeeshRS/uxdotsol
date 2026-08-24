@@ -18,9 +18,12 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { NFTCard } from "./nft-card";
 
@@ -29,52 +32,146 @@ import { NFTCard } from "./nft-card";
    TILT SYSTEM
 ───────────────────────────────────────────────────────────────────────────── */
 const MouseEnterContext = createContext<
-  [boolean, React.Dispatch<React.SetStateAction<boolean>>] | undefined
+  [boolean, React.Dispatch<React.SetStateAction<boolean>>, boolean] | undefined
 >(undefined);
 
-const useMouseEnter = (): [boolean] => {
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const COARSE_POINTER_QUERY = "(hover: none), (pointer: coarse)";
+
+function subscribeToTiltPreference(onStoreChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const queries = [
+    window.matchMedia(REDUCED_MOTION_QUERY),
+    window.matchMedia(COARSE_POINTER_QUERY),
+  ];
+
+  queries.forEach((query) => query.addEventListener("change", onStoreChange));
+  return () => {
+    queries.forEach((query) =>
+      query.removeEventListener("change", onStoreChange),
+    );
+  };
+}
+
+function getTiltDisabledSnapshot() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return (
+    window.matchMedia(REDUCED_MOTION_QUERY).matches ||
+    window.matchMedia(COARSE_POINTER_QUERY).matches
+  );
+}
+
+function useTiltDisabled() {
+  return useSyncExternalStore(
+    subscribeToTiltPreference,
+    getTiltDisabledSnapshot,
+    () => false,
+  );
+}
+
+const useMouseEnter = (): [boolean, boolean] => {
   const context = useContext(MouseEnterContext);
-  return [context ? context[0] : false];
+  return context ? [context[0], context[2]] : [false, false];
 };
 
 function TiltContainer({
   children,
   className = "",
+  disabled = false,
   intensity = 25,
 }: {
   children: React.ReactNode;
   className?: string;
+  disabled?: boolean;
   intensity?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const boundsRef = useRef<DOMRect | null>(null);
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const frameRef = useRef<number | null>(null);
+  const trackingRef = useRef(false);
   const [isMouseEntered, setIsMouseEntered] = useState(false);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const { left, top, width, height } =
-      containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - left - width / 2) / intensity;
-    const y = (e.clientY - top - height / 2) / intensity;
-    containerRef.current.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
-  }, [intensity]);
-
-  const handleMouseEnter = useCallback(() => setIsMouseEntered(true), []);
-
-  const handleMouseLeave = useCallback(() => {
-    if (!containerRef.current) return;
-    setIsMouseEntered(false);
-    containerRef.current.style.transform = "rotateY(0deg) rotateX(0deg)";
+  const refreshBounds = useCallback(() => {
+    if (!trackingRef.current || !containerRef.current) return;
+    boundsRef.current = containerRef.current.getBoundingClientRect();
   }, []);
 
+  useEffect(() => {
+    window.addEventListener("resize", refreshBounds);
+    window.addEventListener("scroll", refreshBounds, true);
+    return () => {
+      window.removeEventListener("resize", refreshBounds);
+      window.removeEventListener("scroll", refreshBounds, true);
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, [refreshBounds]);
+
+  useEffect(() => {
+    if (!disabled || !containerRef.current) return;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    containerRef.current.style.transition = "none";
+    containerRef.current.style.transform = "rotateY(0deg) rotateX(0deg)";
+  }, [disabled]);
+
+  const handlePointerEnter = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    trackingRef.current = true;
+    boundsRef.current = container.getBoundingClientRect();
+    container.style.transition = "none";
+    setIsMouseEntered(!disabled);
+  }, [disabled]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled || !trackingRef.current || !boundsRef.current) return;
+    pointerRef.current = { x: e.clientX, y: e.clientY };
+    if (frameRef.current !== null) return;
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const container = containerRef.current;
+      const bounds = boundsRef.current;
+      if (!container || !bounds || !trackingRef.current) return;
+
+      const rotateY =
+        (pointerRef.current.x - bounds.left - bounds.width / 2) / intensity;
+      const rotateX =
+        -(pointerRef.current.y - bounds.top - bounds.height / 2) / intensity;
+      container.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+    });
+  }, [disabled, intensity]);
+
+  const handlePointerLeave = useCallback(() => {
+    const container = containerRef.current;
+    trackingRef.current = false;
+    boundsRef.current = null;
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    setIsMouseEntered(false);
+    if (!container) return;
+    container.style.transition = disabled
+      ? "none"
+      : "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)";
+    container.style.transform = "rotateY(0deg) rotateX(0deg)";
+  }, [disabled]);
+
   return (
-    <MouseEnterContext.Provider value={[isMouseEntered, setIsMouseEntered]}>
+    <MouseEnterContext.Provider
+      value={[isMouseEntered && !disabled, setIsMouseEntered, disabled]}
+    >
       <div style={{ perspective: "1000px" }}>
         <div
           ref={containerRef}
-          onMouseEnter={handleMouseEnter}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          className={`relative transition-transform duration-200 ease-linear ${className}`}
+          onPointerEnter={handlePointerEnter}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          className={`relative ${className}`}
           style={{ transformStyle: "preserve-3d" }}
         >
           {children}
@@ -94,19 +191,22 @@ function TiltItem({
   translateZ?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isMouseEntered] = useMouseEnter();
+  const [isMouseEntered, disabled] = useMouseEnter();
 
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.style.transform = isMouseEntered
+    ref.current.style.transition = disabled || isMouseEntered
+      ? "none"
+      : "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)";
+    ref.current.style.transform = !disabled && isMouseEntered
       ? `translateZ(${translateZ}px)`
       : "translateZ(0px)";
-  }, [isMouseEntered, translateZ]);
+  }, [disabled, isMouseEntered, translateZ]);
 
   return (
     <div
       ref={ref}
-      className={`transition-transform duration-200 ease-linear ${className}`}
+      className={className}
     >
       {children}
     </div>
@@ -204,14 +304,28 @@ function FlipModal({
   cardRect: DOMRect | null;
   onClose: () => void;
 }) {
-  /** `true` once the morphing box has expanded to its final size. */
-  const [isFlipped, setIsFlipped]     = useState(false);
-  /** `true` while the panel is in its flipped (detail) state. */
-  const [isExpanded, setIsExpanded]   = useState(false);
-  /** Delays rendering the item grid until the flip-in animation completes. */
-  const [showContent, setShowContent] = useState(false);
-  /** Set during the close sequence to prevent re-triggering `handleClose`. */
-  const [isClosing, setIsClosing]     = useState(false);
+  type ModalPhase =
+    | "opening-morph"
+    | "opening-flip"
+    | "open"
+    | "closing-flip"
+    | "closing-morph";
+
+  const [phase, setPhase] = useState<ModalPhase>("opening-morph");
+  const [finalSize, setFinalSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [morphStarted, setMorphStarted] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const [reduceMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+  );
 
   // === SCROLL LOCK (native) ===
   // Locks the page scroll while the modal is open and restores previous
@@ -241,17 +355,54 @@ function FlipModal({
     };
   }, []); // runs once on mount / cleans up on unmount
 
-  // Open sequence: expand → flip → show content
-  useEffect(() => {
-    const t1 = setTimeout(() => setIsExpanded(true), 20);
-    const t2 = setTimeout(() => setIsFlipped(true), 80);
-    const t3 = setTimeout(() => setShowContent(true), 600);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+  // The fixed final box is measured independently from its compositor transform.
+  // Re-measure only on mount and viewport resize, never during animation frames.
+  useLayoutEffect(() => {
+    const measureFinalBox = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const nextSize = {
+        width: dialog.offsetWidth,
+        height: dialog.offsetHeight,
+      };
+      setFinalSize(nextSize);
     };
+
+    measureFinalBox();
+    window.addEventListener("resize", measureFinalBox);
+    return () => window.removeEventListener("resize", measureFinalBox);
   }, []);
+
+  const viewportCenterX = typeof window === "undefined" ? 0 : window.innerWidth / 2;
+  const viewportCenterY = typeof window === "undefined" ? 0 : window.innerHeight / 2;
+  const deltaX = cardRect
+    ? cardRect.left + cardRect.width / 2 - viewportCenterX
+    : 0;
+  const deltaY = cardRect
+    ? cardRect.top + cardRect.height / 2 - viewportCenterY
+    : 0;
+  const scaleX = cardRect && finalSize ? cardRect.width / finalSize.width : 1;
+  const scaleY = cardRect && finalSize ? cardRect.height / finalSize.height : 1;
+  const expandedTransform =
+    "translate(-50%, -50%) translate(0px, 0px) scale(1, 1)";
+  const collapsedTransform = `translate(-50%, -50%) translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`;
+
+  // Open sequence: morph → flip → show content. The initial rAF starts the
+  // first compositor transition while the phase remains the single sequencer.
+  useEffect(() => {
+    if (!finalSize || phase !== "opening-morph") return;
+    if (!reduceMotion && morphStarted) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (reduceMotion) {
+        setPhase("open");
+      } else {
+        setMorphStarted(true);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [finalSize, morphStarted, phase, reduceMotion]);
 
   // Close sequence — prevents flip glitch
   // rule: advanced-event-handler-refs — store handleClose in a ref so the
@@ -259,93 +410,193 @@ function FlipModal({
   const handleCloseRef = useRef<() => void>(() => {});
 
   const handleClose = useCallback(() => {
-    if (isClosing) return;
-    setIsClosing(true);
-    setShowContent(false);
-    setIsFlipped(false);
-
-    setTimeout(() => {
-      setIsExpanded(false);
-    }, 520);
-
-    setTimeout(() => {
+    if (phase === "closing-flip" || phase === "closing-morph") return;
+    if (reduceMotion) {
+      setPhase("closing-morph");
+      return;
+    }
+    if (phase === "opening-morph" && !morphStarted) {
       onClose();
-    }, 950);
-  }, [isClosing, onClose]);
+      return;
+    }
+
+    // Nothing has flipped during the opening morph, so collapse immediately.
+    setPhase(phase === "opening-morph" ? "closing-morph" : "closing-flip");
+  }, [morphStarted, onClose, phase, reduceMotion]);
+
+  const handleMorphTransitionEnd = useCallback(
+    (event: React.TransitionEvent<HTMLDivElement>) => {
+      if (
+        event.target !== event.currentTarget ||
+        event.propertyName !== (reduceMotion ? "opacity" : "transform")
+      ) {
+        return;
+      }
+
+      if (phase === "opening-morph") {
+        setPhase("opening-flip");
+      } else if (phase === "closing-morph") {
+        onClose();
+      }
+    },
+    [onClose, phase, reduceMotion],
+  );
+
+  const handleFlipTransitionEnd = useCallback(
+    (event: React.TransitionEvent<HTMLDivElement>) => {
+      if (
+        event.target !== event.currentTarget ||
+        event.propertyName !== "transform"
+      ) {
+        return;
+      }
+
+      if (phase === "opening-flip") {
+        setPhase("open");
+      } else if (phase === "closing-flip") {
+        setPhase("closing-morph");
+      }
+    },
+    [phase],
+  );
 
   useEffect(() => {
     handleCloseRef.current = handleClose;
   }, [handleClose]);
 
   useEffect(() => {
-    // rule: advanced-event-handler-refs — use ref so we don’t re-register on
-    // every isClosing change, avoiding listener accumulation.
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleCloseRef.current();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleCloseRef.current();
+        return;
+      }
+
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", onKey);
+      previouslyFocusedRef.current?.focus();
+    };
   }, []); // stable — no deps needed
 
   if (!col || !cardRect) return null;
 
-  const expandedStyle: React.CSSProperties = {
+  const morphExpanded = phase !== "closing-morph";
+  const isFlipped = phase === "opening-flip" || phase === "open";
+  const showContent = phase === "open";
+  const morphTransform = reduceMotion
+    ? expandedTransform
+    : morphExpanded && morphStarted
+      ? expandedTransform
+      : collapsedTransform;
+  const morphStyle: React.CSSProperties = {
     top: "50%",
     left: "50%",
     width: "min(880px, 92vw)",
     height: "min(700px, 90vh)",
-    transform: "translate(-50%, -50%)",
+    transform: morphTransform,
+    transformOrigin: "center",
   };
-
-  const collapsedStyle: React.CSSProperties = {
-    top: `${cardRect.top + cardRect.height / 2}px`,
-    left: `${cardRect.left + cardRect.width / 2}px`,
-    width: `${cardRect.width}px`,
-    height: `${cardRect.height}px`,
-    transform: "translate(-50%, -50%)",
-  };
-
-  const boxStyle = isExpanded ? expandedStyle : collapsedStyle;
 
   return (
     <>
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close collection details"
         onClick={handleClose}
+        className="fixed inset-0"
         style={{
-          position: "fixed",
-          inset: 0,
           zIndex: 200,
           background: "rgba(0,0,0,0.68)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
-          opacity: isExpanded ? 1 : 0,
-          transition: "opacity 0.38s ease",
-          pointerEvents: isClosing && !isExpanded ? "none" : "auto",
+          opacity:
+            reduceMotion
+              ? phase === "open"
+                ? 1
+                : 0
+              : morphExpanded && morphStarted
+                ? 1
+                : 0,
+          pointerEvents: phase === "closing-morph" ? "none" : "auto",
+          transition: `opacity 200ms ${reduceMotion ? "ease" : "cubic-bezier(0.23, 1, 0.32, 1)"}`,
         }}
       />
 
       {/* Morphing box */}
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onTransitionEnd={handleMorphTransitionEnd}
+        className="fixed overscroll-contain outline-none"
         style={{
-          position: "fixed",
           zIndex: 201,
-          ...boxStyle,
-          transition: isExpanded
-            ? "top 0.46s cubic-bezier(0.16,1,0.3,1), left 0.46s cubic-bezier(0.16,1,0.3,1), width 0.46s cubic-bezier(0.16,1,0.3,1), height 0.46s cubic-bezier(0.16,1,0.3,1)"
-            : "top 0.38s cubic-bezier(0.4,0,1,1), left 0.38s cubic-bezier(0.4,0,1,1), width 0.38s cubic-bezier(0.4,0,1,1), height 0.38s cubic-bezier(0.4,0,1,1)",
+          ...morphStyle,
           perspective: "1200px",
+          visibility: finalSize ? "visible" : "hidden",
+          opacity:
+            reduceMotion &&
+            (phase === "opening-morph" || phase === "closing-morph")
+              ? 0
+              : 1,
+          transitionProperty: reduceMotion ? "opacity" : "transform",
+          transitionDuration: reduceMotion
+            ? "200ms"
+            : phase === "closing-morph"
+              ? "220ms"
+              : "280ms",
+          transitionTimingFunction: reduceMotion
+            ? "ease"
+            : "cubic-bezier(0.23, 1, 0.32, 1)",
+          willChange:
+            phase === "opening-morph" || phase === "closing-morph"
+              ? reduceMotion
+                ? "opacity"
+                : "transform"
+              : undefined,
         }}
       >
         {/* Flip card inner */}
         <div
+          onTransitionEnd={handleFlipTransitionEnd}
+          className="transition-transform duration-[520ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none"
           style={{
             width: "100%",
             height: "100%",
             position: "relative",
             transformStyle: "preserve-3d",
             transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-            transition: "transform 0.52s cubic-bezier(0.4,0,0.2,1)",
             borderRadius: "20px",
           }}
         >
@@ -361,13 +612,13 @@ function FlipModal({
             className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/8"
           >
             <div className="relative h-2/5 overflow-hidden">
-              <img src={col.bannerImage} alt={col.name} className="w-full h-full object-cover" />
+              <img src={col.bannerImage} alt={col.name} width={880} height={280} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-white dark:to-[#111113]" />
             </div>
             <div className="px-5 pt-4 pb-5">
               <div className="flex flex-col items-center justify-center gap-3">
                 <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white dark:border-[#111113] shadow-md shrink-0">
-                  <img src={col.logoImage} alt={col.name} className="w-full h-full object-cover" />
+                  <img src={col.logoImage} alt={col.name} width={48} height={48} className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <div className="flex items-center justify-center gap-1.5">
@@ -401,12 +652,12 @@ function FlipModal({
             {/* Header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-white/6 shrink-0">
               <div className="w-9 h-9 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/8 shrink-0">
-                <img src={col.logoImage} alt={col.name} className="w-full h-full object-cover" />
+                <img src={col.logoImage} alt={col.name} width={36} height={36} className="w-full h-full object-cover" />
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[14px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{col.name}</span>
+                  <span id={titleId} className="text-[14px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{col.name}</span>
                   {col.verified && <VerifiedBadge size={12} />}
                 </div>
                 <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -419,10 +670,13 @@ function FlipModal({
 
 
               <button
+                ref={closeButtonRef}
+                type="button"
+                aria-label="Close collection details"
                 onClick={handleClose}
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-zinc-100 dark:bg-[#18181b] border border-zinc-200 dark:border-white/5 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-[#27272a] transition-colors duration-150 cursor-pointer"
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -575,6 +829,7 @@ export function NFTCollectionCard({
   const isUp = floorChange !== undefined && floorChange >= 0;
   /** Whether the card is currently hovered (drives lift / shadow effect). */
   const [hover, setHover] = useState(false);
+  const tiltDisabled = useTiltDisabled();
   /** Whether the `FlipModal` is currently mounted. */
   const [modalOpen, setModalOpen] = useState(false);
   /** The card's `DOMRect` at the time the modal was opened. */
@@ -600,13 +855,6 @@ export function NFTCollectionCard({
   const handleMouseLeave = useCallback(() => setHover(false), []);
   /** Stable callback passed to `FlipModal.onClose` to avoid prop object churn. */
   const handleModalClose = useCallback(() => setModalOpen(false), []);
-  const handleCardKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleOpen();
-    }
-  }, [handleOpen]);
-
   // rule: rerender-memo-with-default-value — build col object once with useMemo
   // to avoid passing a new object reference to FlipModal on every render.
   const colData = useMemo(
@@ -617,14 +865,9 @@ export function NFTCollectionCard({
   const cardInner = (
     <div
       ref={cardRef}
-      onClick={handleOpen}
-      onKeyDown={handleCardKeyDown}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${name} collection details`}
-      className={`relative w-70 rounded-2xl overflow-hidden bg-white dark:bg-[#111113] border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113] ${hover && !tilt ? "-translate-y-1" : ""} ${className}`}
+      className={`relative w-70 rounded-2xl overflow-hidden bg-white dark:bg-[#111113] border cursor-pointer transition-[border-color,box-shadow,transform] duration-200 focus-within:ring-2 focus-within:ring-zinc-950/10 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-zinc-50/15 dark:focus-within:ring-offset-[#111113] ${hover && !tilt ? "-translate-y-1" : ""} ${className}`}
       style={{
         borderColor: hover ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.07)",
         boxShadow: hover
@@ -633,13 +876,21 @@ export function NFTCollectionCard({
         transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
       }}
     >
-      <TiltItem translateZ={tilt ? 30 : 0}>
+      <TiltItem translateZ={tilt ? 30 : 0} className="relative z-20 pointer-events-none">
         <div className="relative w-full h-30 overflow-hidden">
           <img
             src={bannerImage}
             alt={`${name} banner`}
-            className="w-full h-full object-cover transition-transform duration-500"
-            style={{ transform: hover ? "scale(1.05)" : "scale(1)" }}
+            width={560}
+            height={240}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            style={{
+              transform: hover && !tiltDisabled ? "scale(1.05)" : "scale(1)",
+              transition: tiltDisabled
+                ? "none"
+                : "transform 180ms cubic-bezier(0.23, 1, 0.32, 1)",
+            }}
           />
           <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-white/70 dark:to-[#111113]/90" />
           {/* rule: rendering-conditional-render — ternary not && */}
@@ -649,9 +900,10 @@ export function NFTCollectionCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-lg bg-black/30 backdrop-blur-md hover:bg-black/50 transition-colors duration-150"
+              aria-label={`Open ${name} website`}
+              className="pointer-events-auto absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-lg bg-black/30 backdrop-blur-md hover:bg-black/50 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                 <polyline points="15 3 21 3 21 9" />
                 <line x1="10" y1="14" x2="21" y2="3" />
@@ -661,11 +913,11 @@ export function NFTCollectionCard({
         </div>
       </TiltItem>
 
-      <TiltItem translateZ={tilt ? 20 : 0}>
+      <TiltItem translateZ={tilt ? 20 : 0} className="relative z-20 pointer-events-none">
         <div className="px-4 pb-4 flex flex-col gap-3">
           <div className="flex flex-col items-center gap-3 -mt-5">
             <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-white dark:border-[#111113] shadow-sm shrink-0 bg-white dark:bg-[#111113]" style={{ zIndex: 2 }}>
-              <img src={logoImage} alt={name} className="w-full h-full object-cover" />
+              <img src={logoImage} alt={name} width={48} height={48} loading="lazy" className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col items-center justify-center gap-0.5 min-w-0">
               <div className="flex items-center gap-1">
@@ -746,7 +998,7 @@ export function NFTCollectionCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onExplore(); }}
-              className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:opacity-80 active:scale-[0.97] text-white dark:text-zinc-900 text-[13px] font-semibold tracking-tight transition-[background-color,color,opacity,transform,box-shadow] duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
+              className="pointer-events-auto relative z-20 w-full mt-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:opacity-80 active:scale-[0.97] text-white dark:text-zinc-900 text-[13px] font-semibold tracking-tight transition-[background-color,color,opacity,transform,box-shadow] duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
             >
               Explore collection
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -756,13 +1008,21 @@ export function NFTCollectionCard({
           ) : null}
         </div>
       </TiltItem>
+      <button
+        type="button"
+        onClick={handleOpen}
+        aria-label={`Open ${name} collection details`}
+        className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none"
+      />
     </div>
   );
 
   return (
     <>
       {tilt ? (
-        <TiltContainer intensity={tiltIntensity}>{cardInner}</TiltContainer>
+        <TiltContainer intensity={tiltIntensity} disabled={tiltDisabled}>
+          {cardInner}
+        </TiltContainer>
       ) : (
         cardInner
       )}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "mobile-wallet-payment",
+  "title": "Mobile Wallet Payment Template",
+  "description": "Complete responsive Solana Pay page for desktop QR and same-device mobile wallet payments.",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://uxdotsol.xyz/r/mobile-wallet-payment-flow.json"
+  ],
+  "files": [
+    {
+      "path": "registry/uxdotsol/templates/mobile-wallet-payment.tsx",
+      "content": "\"use client\";\n\nimport {\n  MobileWalletPaymentFlow,\n  type MobileWalletPaymentFlowProps,\n} from \"@/components/uxdotsol/flows/mobile-wallet-payment-flow\";\n\nexport type MobileWalletPaymentTemplateProps = MobileWalletPaymentFlowProps & {\n  heading?: string;\n};\n\nexport function MobileWalletPaymentTemplate({\n  heading = \"Pay with a mobile wallet\",\n  ...props\n}: MobileWalletPaymentTemplateProps) {\n  return (\n    <main className=\"min-h-screen bg-zinc-50 px-4 py-10 dark:bg-black sm:px-6\">\n      <div className=\"mx-auto max-w-5xl\">\n        <header className=\"mb-7\"><p className=\"text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400\">Solana Pay</p><h1 className=\"mt-1 text-2xl font-bold tracking-[-0.04em] text-zinc-950 dark:text-zinc-50\">{heading}</h1></header>\n        <MobileWalletPaymentFlow {...props} />\n      </div>\n    </main>\n  );\n}\n\nexport default MobileWalletPaymentTemplate;\n",
+      "type": "registry:component",
+      "target": "@components/uxdotsol/templates/mobile-wallet-payment.tsx"
+    }
+  ],
+  "docs": "Mount inside SolanaProvider for browser-wallet submission. Confirm the order through server-side signature and reference verification before showing paid state.",
+  "type": "registry:component"
+}

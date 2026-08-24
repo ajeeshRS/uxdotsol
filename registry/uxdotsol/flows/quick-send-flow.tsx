@@ -11,8 +11,8 @@ import {
 } from "react";
 import { PublicKey, type Connection } from "@solana/web3.js";
 import { Check, Copy, ExternalLink, Loader2 } from "lucide-react";
-import { useSmartRetry } from "../hooks/use-smart-retry";
-import { useTransactionStatus } from "../hooks/use-transaction-status";
+import { useSmartRetry } from "@/hooks/uxdotsol/use-smart-retry";
+import { useTransactionStatus } from "@/hooks/uxdotsol/use-transaction-status";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -23,32 +23,46 @@ export type QuickSendStatus =
   | "confirmed"
   | "failed";
 
+export type QuickSendTokenOption = {
+  mint?: string;
+  symbol: string;
+  label?: string;
+};
+
 export type QuickSendFlowProps = {
   /** Display name for the sender wallet */
   senderName?: string;
   /** Sender wallet address shown in the route summary */
-  sender?: string;
+  sender: string;
   /** Display name for the recipient (e.g. "alice.sol", "Bonk DAO") */
   recipientName?: string;
   /** Full recipient wallet address */
   recipient?: string;
   /** Token symbol label (default: "SOL") */
   tokenSymbol?: string;
+  /** Optional token choices controlled by tokenSymbol */
+  tokenOptions?: QuickSendTokenOption[];
+  /** Called when the user selects another token */
+  onTokenChange?: (token: QuickSendTokenOption) => void;
   /** Optional spendable balance label shown with the connected account */
   availableBalance?: string;
+  /** Exact spendable amount used for insufficient-balance validation */
+  spendableBalance?: number;
+  /** Numeric fee added when it is charged in the selected token */
+  estimatedNetworkFee?: number;
   /** Preset quick-amount buttons */
   presets?: number[];
   /** Cluster for explorer links */
   cluster?: "mainnet-beta" | "devnet" | "testnet" | string;
   /** Network fee label shown in the receipt */
   networkFee?: string;
-  /** Live Solana connection — optional. Without it the flow runs in demo mode */
+  /** Live Solana connection used to track the submitted signature */
   connection?: Connection | null;
   /**
    * Called to actually send the transaction. Receives the amount and recipient,
    * then resolves with the transaction signature string.
    */
-  onSend?: (amount: number, recipient: string) => Promise<string>;
+  onSend: (amount: number, recipient: string) => Promise<string>;
   /** Optional confirmation step. Use this to wait for your wallet/RPC flow */
   onConfirm?: (
     signature: string,
@@ -66,8 +80,6 @@ export type QuickSendFlowProps = {
   onError?: (error: Error) => void;
 };
 
-const demoSender = "4wBqpZM9xaSheZzJSMawUKKwhdpChKbZ5eu5ky4Vigw";
-const demoRecipient = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosg88R";
 const registryBorder = "border-[#f4f4f4] dark:border-[#141414]";
 const registryDivider = "divide-[#f4f4f4] dark:divide-[#141414]";
 const registryInset =
@@ -75,10 +87,6 @@ const registryInset =
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
-}
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
 function shortAddress(address: string) {
@@ -256,14 +264,18 @@ function ConnectedAccount({
 
 export function QuickSendFlow({
   senderName = "Connected wallet",
-  sender = demoSender,
-  recipientName = "ux.sol",
-  recipient = demoRecipient,
+  sender,
+  recipientName,
+  recipient = "",
   tokenSymbol = "SOL",
+  tokenOptions = [],
+  onTokenChange,
   availableBalance,
+  spendableBalance,
+  estimatedNetworkFee = 0,
   presets = [0.1, 0.5, 1, 5],
   cluster = "devnet",
-  networkFee = "0.000005 SOL",
+  networkFee = "Calculated at signing",
   connection = null,
   onSend,
   onConfirm,
@@ -275,6 +287,10 @@ export function QuickSendFlow({
   const recipientId = useId();
   const amountRef = useRef<HTMLInputElement>(null);
   const recipientRef = useRef<HTMLInputElement>(null);
+  const confirmedReceiptRef = useRef<HTMLDivElement>(null);
+  const confirmedCheckRef = useRef<HTMLSpanElement>(null);
+  const confirmedActionsRef = useRef<HTMLDivElement>(null);
+  const confirmationAnimationsRef = useRef<Animation[]>([]);
   const inFlightRef = useRef(false);
   const settledSignatureRef = useRef<string | null>(null);
   const [amount, setAmount] = useState(String(presets[1] ?? 0.5));
@@ -289,18 +305,23 @@ export function QuickSendFlow({
   const numericAmount = Number(amount);
   const hasAmount = Number.isFinite(numericAmount) && numericAmount > 0;
   const hasRecipient = isValidSolanaAddress(recipientInput);
-  const displayBalance = availableBalance ?? (onSend ? undefined : "12.48 SOL");
+  const displayBalance = availableBalance;
   const amountError = !amount
     ? "Enter an amount."
     : !hasAmount
       ? "Enter an amount greater than 0."
+      : spendableBalance !== undefined &&
+          numericAmount + estimatedNetworkFee > spendableBalance
+        ? "Amount and estimated fee exceed the available balance."
       : null;
   const recipientError = !recipientInput
     ? "Enter a recipient address."
     : !hasRecipient
       ? "Enter a valid Solana address."
       : null;
-  const showAmountError = Boolean(amountError && (amountTouched || submitAttempted));
+  const showAmountError = Boolean(
+    amountError && (amountTouched || submitAttempted),
+  );
   const showRecipientError = Boolean(
     recipientError && (recipientTouched || submitAttempted),
   );
@@ -374,12 +395,12 @@ export function QuickSendFlow({
       return;
     }
 
-    if (!hasAmount) {
+    if (amountError) {
       amountRef.current?.focus();
       return;
     }
 
-    if (onSend && !onConfirm && !connection) {
+    if (!onConfirm && !connection) {
       failTransfer(
         new Error(
           "Provide a Solana connection or onConfirm to verify this transfer.",
@@ -398,26 +419,12 @@ export function QuickSendFlow({
       let nextSignature = resumeSignature;
 
       if (!nextSignature) {
-        if (onSend) {
-          nextSignature = await sendRetry.execute(() =>
-            onSend(numericAmount, recipientInput),
-          );
-        } else {
-          await wait(900);
-          nextSignature = `quicksend_${Date.now().toString(36)}_${Math.random()
-            .toString(36)
-            .slice(2, 8)}`;
-        }
-
+        nextSignature = await sendRetry.execute(() =>
+          onSend(numericAmount, recipientInput),
+        );
         setSignature(nextSignature);
       }
       setFlowStatus("confirming");
-
-      if (!onSend) {
-        await wait(800);
-        completeTransfer(nextSignature, numericAmount, recipientInput);
-        return;
-      }
 
       if (onConfirm) {
         await confirmationRetry.execute(async () => {
@@ -446,7 +453,7 @@ export function QuickSendFlow({
     connection,
     confirmationRetry,
     failTransfer,
-    hasAmount,
+    amountError,
     hasRecipient,
     flowStatus,
     numericAmount,
@@ -506,6 +513,53 @@ export function QuickSendFlow({
     transactionStatus,
   ]);
 
+  const cancelConfirmationAnimations = useCallback(() => {
+    confirmationAnimationsRef.current.forEach((animation) =>
+      animation.cancel(),
+    );
+    confirmationAnimationsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    if (flowStatus !== "confirmed") return;
+
+    cancelConfirmationAnimations();
+
+    const receipt = confirmedReceiptRef.current;
+    const check = confirmedCheckRef.current;
+    const actions = confirmedActionsRef.current;
+    if (!receipt || !check || !actions) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const normalFrames: Keyframe[] = [
+      { opacity: 0, transform: "translateY(8px) scale(0.97)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ];
+    const reducedFrames: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
+    const checkFrames: Keyframe[] = [
+      { transform: "scale(0.94)" },
+      { transform: "scale(1)" },
+    ];
+    const timing: KeyframeAnimationOptions = prefersReducedMotion
+      ? { duration: 200, easing: "ease", fill: "both" }
+      : {
+          duration: 220,
+          easing: "cubic-bezier(0.23, 1, 0.32, 1)",
+          fill: "both",
+        };
+    const revealFrames = prefersReducedMotion ? reducedFrames : normalFrames;
+
+    confirmationAnimationsRef.current = [
+      receipt.animate(revealFrames, timing),
+      check.animate(prefersReducedMotion ? reducedFrames : checkFrames, timing),
+      actions.animate(revealFrames, { ...timing, delay: 40 }),
+    ];
+
+    return cancelConfirmationAnimations;
+  }, [cancelConfirmationAnimations, flowStatus]);
+
   const clearFailedAttempt = useCallback(() => {
     if (flowStatus !== "failed") return;
     inFlightRef.current = false;
@@ -516,6 +570,7 @@ export function QuickSendFlow({
   }, [flowStatus]);
 
   const handleNewSend = useCallback(() => {
+    cancelConfirmationAnimations();
     inFlightRef.current = false;
     settledSignatureRef.current = null;
     setAmount("");
@@ -525,7 +580,7 @@ export function QuickSendFlow({
     setFlowStatus("idle");
     setSignature(null);
     setFlowError(null);
-  }, []);
+  }, [cancelConfirmationAnimations]);
 
   const isBusy = flowStatus === "sending" || flowStatus === "confirming";
 
@@ -594,20 +649,19 @@ export function QuickSendFlow({
         </span>
       </header>
 
-      <form
-        onSubmit={handleFormSubmit}
-        className="space-y-3 p-4"
-        noValidate
-      >
+      <form onSubmit={handleFormSubmit} className="space-y-3 p-4" noValidate>
         {flowStatus === "confirmed" ? (
-          <div aria-live="polite">
+          <div ref={confirmedReceiptRef} aria-live="polite">
             <div
               className={cx(
                 "flex flex-col items-center border-b pb-4 text-center",
                 registryBorder,
               )}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_5px_rgba(16,185,129,0.12)]">
+              <span
+                ref={confirmedCheckRef}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_5px_rgba(16,185,129,0.12)]"
+              >
                 <Check size={19} strokeWidth={2.5} aria-hidden="true" />
               </span>
               <p className="mt-3 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
@@ -670,6 +724,36 @@ export function QuickSendFlow({
               address={sender}
               balance={displayBalance}
             />
+
+            {tokenOptions.length > 1 ? (
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                  Token
+                </span>
+                <select
+                  value={tokenSymbol}
+                  onChange={(event) => {
+                    const token = tokenOptions.find(
+                      (option) => option.symbol === event.currentTarget.value,
+                    );
+                    if (token) onTokenChange?.(token);
+                    clearFailedAttempt();
+                  }}
+                  disabled={isBusy}
+                  className={cx(
+                    "min-h-11 w-full rounded-xl border px-3 text-sm font-semibold text-zinc-900 outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/20 dark:text-zinc-100 dark:focus-visible:ring-zinc-50/25",
+                    registryBorder,
+                    registryInset,
+                  )}
+                >
+                  {tokenOptions.map((token) => (
+                    <option key={token.mint ?? token.symbol} value={token.symbol}>
+                      {token.label ?? token.symbol}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
 
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-3">
@@ -844,7 +928,10 @@ export function QuickSendFlow({
         )}
 
         {flowStatus === "confirmed" ? (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div
+            ref={confirmedActionsRef}
+            className="grid gap-2 sm:grid-cols-2"
+          >
             {explorerLink ? (
               <a
                 href={explorerLink}

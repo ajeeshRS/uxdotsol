@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "merchant-checkout",
+  "title": "Merchant Checkout Template",
+  "description": "Complete merchant payment page composed from provider quoting and Solana Pay checkout primitives.",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://uxdotsol.xyz/r/payment-checkout-flow.json"
+  ],
+  "files": [
+    {
+      "path": "registry/uxdotsol/templates/merchant-checkout.tsx",
+      "content": "\"use client\";\n\nimport {\n  PaymentCheckoutFlow,\n  type PaymentCheckoutFlowProps,\n} from \"@/components/uxdotsol/flows/payment-checkout-flow\";\n\nexport type MerchantCheckoutTemplateProps = PaymentCheckoutFlowProps & {\n  supportEmail?: string;\n};\n\nexport function MerchantCheckoutTemplate({\n  supportEmail,\n  ...props\n}: MerchantCheckoutTemplateProps) {\n  return (\n    <main className=\"min-h-screen bg-zinc-50 px-4 py-10 dark:bg-black sm:px-6\">\n      <div className=\"mx-auto max-w-5xl\">\n        <header className=\"mb-7 flex items-center justify-between gap-4\">\n          <div><p className=\"text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400\">Secure checkout</p><h1 className=\"mt-1 text-2xl font-bold tracking-[-0.04em] text-zinc-950 dark:text-zinc-50\">{props.merchantName || \"Merchant payment\"}</h1></div>\n          {supportEmail ? <a href={`mailto:${supportEmail}`} className=\"text-sm font-semibold text-zinc-600 hover:underline dark:text-zinc-300\">Need help?</a> : null}\n        </header>\n        <PaymentCheckoutFlow {...props} />\n      </div>\n    </main>\n  );\n}\n\nexport default MerchantCheckoutTemplate;\n",
+      "type": "registry:component",
+      "target": "@components/uxdotsol/templates/merchant-checkout.tsx"
+    }
+  ],
+  "docs": "Mount inside SolanaProvider when browser-wallet submission is enabled. Supply server-verified payment status and a unique order reference in production.",
+  "type": "registry:component"
+}

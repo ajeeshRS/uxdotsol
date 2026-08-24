@@ -12,7 +12,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/address-display.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/address-display.tsx"
         }
       ]
     },
@@ -32,16 +33,210 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/connect-wallet-btn.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/connect-wallet-btn.tsx"
         },
         {
           "path": "components/solana-provider.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/solana-provider.tsx"
         },
         {
           "path": "app/api/wallet-account/route.ts",
           "type": "registry:page",
           "target": "~/app/api/wallet-account/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "sign-in-with-solana",
+      "type": "registry:component",
+      "title": "Sign In With Solana",
+      "description": "Authenticates a Solana wallet with a server-issued SIWS challenge, Wallet Standard sign-in, signature verification, and an HTTP-only session.",
+      "dependencies": [
+        "lucide-react",
+        "next",
+        "@solana/wallet-adapter-react",
+        "@solana/wallet-standard-features",
+        "@solana/wallet-standard-util"
+      ],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/connect-wallet-btn.json"
+      ],
+      "envVars": {
+        "SOLANA_AUTH_SECRET": "",
+        "SOLANA_AUTH_ORIGIN": "",
+        "SOLANA_AUTH_CHAIN_ID": "mainnet",
+        "SOLANA_AUTH_STATEMENT": ""
+      },
+      "docs": "Requires Next.js App Router. Development uses an ephemeral process-local secret. In production, set SOLANA_AUTH_SECRET to at least 32 random characters and SOLANA_AUTH_ORIGIN to the canonical HTTPS origin.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/sign-in-with-solana.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/sign-in-with-solana.tsx"
+        },
+        {
+          "path": "app/api/auth/solana/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/auth/solana/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "solana-pay-checkout",
+      "type": "registry:component",
+      "title": "Solana Pay Checkout",
+      "description": "Renders a Solana Pay transfer-request checkout with a wallet deep link, scannable QR code, reconciliation reference support, and externally verified payment states.",
+      "dependencies": [
+        "buffer@^6.0.3",
+        "lucide-react",
+        "qrcode.react@^4.2.0",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js"
+      ],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/connect-wallet-btn.json"
+      ],
+      "docs": "Requires SolanaProvider from the connect-wallet-btn registry dependency. Browser wallets connect and submit SOL or SPL transfers through Wallet Adapter; mobile wallets can scan the Solana Pay QR or use the same-device link. Pass a unique reference for every order and update status only after server-side payment validation. Memos are public onchain and must not contain sensitive data.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/solana-pay-checkout.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/solana-pay-checkout.tsx"
+        },
+        {
+          "path": "registry/uxdotsol/lib/token-program.ts",
+          "type": "registry:lib",
+          "target": "@lib/uxdotsol/token-program.ts"
+        }
+      ]
+    },
+    {
+      "name": "transaction-review",
+      "type": "registry:component",
+      "title": "Transaction Review",
+      "description": "Displays a normalized, wallet-agnostic transaction summary with parties, amounts, fees, network context, risk warnings, and controlled confirmation actions.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/address-display.json",
+        "https://uxdotsol.xyz/r/button.json"
+      ],
+      "docs": "Transaction Review is presentational and provider-neutral. Pass already resolved transaction intent data and keep simulation, signing, submission, and confirmation in hooks or flow-level orchestration.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/transaction-review.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/transaction-review.tsx"
+        }
+      ]
+    },
+    {
+      "name": "safe-recipient-field",
+      "type": "registry:component",
+      "title": "Safe Recipient Field",
+      "description": "Validates Solana recipients with local safety checks and real RPC account inspection before a transaction continues.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-recipient-validation.json"
+      ],
+      "docs": "RPC checks establish address format and current account properties, not human identity or ownership. New addresses may legitimately have no account until they receive SOL. Name resolution and third-party risk APIs belong in separate API abstraction hooks.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/safe-recipient-field.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/safe-recipient-field.tsx"
+        }
+      ]
+    },
+    {
+      "name": "token-safety-disclosure",
+      "type": "registry:component",
+      "title": "Token Safety Disclosure",
+      "description": "Explains current token risk signals, verification, liquidity, holder data, and provider uncertainty without presenting safety as a guarantee.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-token-safety.json"
+      ],
+      "docs": "Uses the use-token-safety API abstraction hook and its server route. Configure JUPITER_API_KEY for the bundled Jupiter adapter, or pass a custom provider adapter. Provider errors, missing tokens, and incomplete metadata remain explicit unknown states.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/token-safety-disclosure.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/token-safety-disclosure.tsx"
+        }
+      ]
+    },
+    {
+      "name": "transaction-lifecycle",
+      "type": "registry:component",
+      "title": "Transaction Lifecycle",
+      "description": "Shows wallet approval, submission, processing, confirmation, failure, and timeout states backed by an actual transaction signature and Solana RPC.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-transaction-status.json"
+      ],
+      "docs": "Pre-signature states are controlled by the parent wallet flow. Once a signature exists, status comes from the use-transaction-status RPC hook. A timeout is not proof of failure; users should inspect or recheck the signature before sending again.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/transaction-lifecycle.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/transaction-lifecycle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "transaction-receipt",
+      "type": "registry:component",
+      "title": "Transaction Receipt",
+      "description": "Renders immutable confirmed, finalized, or failed transaction evidence with parties, amount, fee, network, timestamp, slot, signature, and explorer access.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/address-display.json",
+        "https://uxdotsol.xyz/r/button.json"
+      ],
+      "docs": "Transaction Receipt is provider-neutral and does not infer confirmation. Populate it only from authoritative wallet, RPC, indexer, or backend results. Keep pending states in Transaction Lifecycle and retain the full signature for verification.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/transaction-receipt.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/transaction-receipt.tsx"
+        }
+      ]
+    },
+    {
+      "name": "transaction-progress-timeline",
+      "type": "registry:component",
+      "title": "Transaction Progress Timeline",
+      "description": "Renders provider-neutral transaction milestones with observed timestamps, details, current progress, skipped events, failures, and optional retry.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/button.json"
+      ],
+      "docs": "Pass normalized milestones from wallet, RPC, indexer, or backend events. Record timestamps only when events are actually observed; use skipped when a provider advances past an unobserved intermediate state rather than inventing history.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/transaction-progress-timeline.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/transaction-progress-timeline.tsx"
+        }
+      ]
+    },
+    {
+      "name": "fee-estimate",
+      "type": "registry:component",
+      "title": "Fee Estimate",
+      "description": "Displays provider-calculated transaction fees with an itemized total, network and source context, observed timestamp, refresh, loading, and error states.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/button.json"
+      ],
+      "docs": "Fee Estimate is provider-neutral and never calculates or invents fees. Populate it from an RPC, wallet, indexer, or backend response for the exact transaction message, and refresh whenever that message, its blockhash, or network conditions change.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/components/fee-estimate.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/fee-estimate.tsx"
         }
       ]
     },
@@ -54,7 +249,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/button.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/button.tsx"
         }
       ]
     },
@@ -67,7 +263,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/nft-card.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/nft-card.tsx"
         }
       ]
     },
@@ -81,7 +278,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/nft-card-collection.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/nft-card-collection.tsx"
         }
       ]
     },
@@ -106,7 +304,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/coin-price.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/coin-price.tsx"
         },
         {
           "path": "app/api/coin-price/route.ts",
@@ -124,7 +323,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/token-swap.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/token-swap.tsx"
         }
       ]
     },
@@ -137,7 +337,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/components/status-badge.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/status-badge.tsx"
         }
       ]
     },
@@ -150,7 +351,45 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-token-balance.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-token-balance.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-token-safety",
+      "type": "registry:hook",
+      "title": "useTokenSafety",
+      "description": "Loads token metadata and exposes normalized safe, caution, danger, and unknown states for financial UI.",
+      "dependencies": ["next"],
+      "envVars": {
+        "JUPITER_API_KEY": ""
+      },
+      "docs": "Requires Next.js App Router. The included server route keeps JUPITER_API_KEY out of the browser and normalizes Jupiter Tokens V2 metadata into provider-neutral safety data. Safety signals are informational and must not be presented as guarantees.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-token-safety.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-token-safety.ts"
+        },
+        {
+          "path": "app/api/token-safety/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/token-safety/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-recipient-validation",
+      "type": "registry:hook",
+      "title": "useRecipientValidation",
+      "description": "Runs local recipient safety rules and inspects the real Solana account through RPC without performing HTTP API abstraction or identity resolution.",
+      "dependencies": ["@solana/web3.js"],
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-recipient-validation.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-recipient-validation.ts"
         }
       ]
     },
@@ -163,7 +402,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-transaction-simulation.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-transaction-simulation.ts"
         }
       ]
     },
@@ -176,7 +416,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-smart-retry.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-smart-retry.ts"
         }
       ]
     },
@@ -189,7 +430,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-transaction-status.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-transaction-status.ts"
         }
       ]
     },
@@ -202,7 +444,8 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-private-payment.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-private-payment.ts"
         }
       ]
     },
@@ -215,7 +458,179 @@
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-optimistic-transaction.ts",
-          "type": "registry:hook"
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-optimistic-transaction.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-token-list",
+      "type": "registry:hook",
+      "title": "useTokenList",
+      "description": "Searches tokens through a replaceable server adapter and returns normalized metadata with explicit loading, error, and refresh states.",
+      "dependencies": ["next"],
+      "envVars": {
+        "JUPITER_API_KEY": ""
+      },
+      "docs": "Requires Next.js App Router. The bundled route uses Jupiter Tokens V2 while keeping JUPITER_API_KEY on the server. Pass a custom adapter to use another token provider without changing the UI contract.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-token-list.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-token-list.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/token-list/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/token-list/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-token-metadata",
+      "type": "registry:hook",
+      "title": "useTokenMetadata",
+      "description": "Loads normalized metadata for one Solana token mint through a replaceable server adapter.",
+      "dependencies": ["next"],
+      "envVars": {
+        "JUPITER_API_KEY": ""
+      },
+      "docs": "Requires Next.js App Router. The included Jupiter adapter keeps provider credentials on the server and returns explicit not-found, configuration, provider, and invalid-response errors.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-token-metadata.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-token-metadata.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/token-metadata/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/token-metadata/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-priority-fee-estimate",
+      "type": "registry:hook",
+      "title": "usePriorityFeeEstimate",
+      "description": "Reads recent Solana prioritization-fee samples and exposes normalized low, medium, and high ranges.",
+      "dependencies": ["next", "@solana/web3.js"],
+      "envVars": {
+        "MAINNET_RPC": "",
+        "DEVNET_RPC": ""
+      },
+      "docs": "Requires Next.js App Router. Estimates are recent RPC observations in micro-lamports per compute unit, not guaranteed transaction fees. Pass writable accounts for a transaction-specific sample or replace the client adapter.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-priority-fee-estimate.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-priority-fee-estimate.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/priority-fee-estimate/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/priority-fee-estimate/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-payment-quote",
+      "type": "registry:hook",
+      "title": "usePaymentQuote",
+      "description": "Requests a normalized ExactIn or ExactOut token conversion quote through a replaceable payment provider adapter.",
+      "dependencies": ["next"],
+      "envVars": {
+        "JUPITER_API_KEY": ""
+      },
+      "docs": "Requires Next.js App Router. Amounts use atomic token units. The bundled route returns Jupiter quote evidence but does not build, sign, or execute a swap.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-payment-quote.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-payment-quote.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/payment-quote/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/payment-quote/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-payment-status",
+      "type": "registry:hook",
+      "title": "usePaymentStatus",
+      "description": "Verifies an existing Solana payment signature through a server RPC adapter with explicit not-found and terminal states.",
+      "dependencies": ["next", "@solana/web3.js"],
+      "envVars": {
+        "MAINNET_RPC": "",
+        "DEVNET_RPC": ""
+      },
+      "docs": "Requires Next.js App Router. The included route searches transaction history and reports processed, confirmed, finalized, failed, or not-found without treating a temporary lookup miss as proof of failure.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-payment-status.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-payment-status.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/payment-status/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/payment-status/route.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-transaction-history",
+      "type": "registry:hook",
+      "title": "useTransactionHistory",
+      "description": "Loads recent Solana signatures for an address through a server RPC adapter with cursor-ready normalized results.",
+      "dependencies": ["next", "@solana/web3.js"],
+      "envVars": {
+        "MAINNET_RPC": "",
+        "DEVNET_RPC": ""
+      },
+      "docs": "Requires Next.js App Router. The bundled route reads getSignaturesForAddress and returns signatures, observed status, timestamps, memos, errors, and a next cursor. It does not infer transfer intent from signatures alone.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/hooks/use-transaction-history.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-transaction-history.ts"
+        },
+        {
+          "path": "registry/uxdotsol/hooks/use-api-resource.ts",
+          "type": "registry:hook",
+          "target": "@hooks/uxdotsol/use-api-resource.ts"
+        },
+        {
+          "path": "app/api/transaction-history/route.ts",
+          "type": "registry:page",
+          "target": "~/app/api/transaction-history/route.ts"
         }
       ]
     },
@@ -229,10 +644,87 @@
         "https://uxdotsol.xyz/r/use-smart-retry.json",
         "https://uxdotsol.xyz/r/use-transaction-status.json"
       ],
+      "docs": "Provide a real onSend implementation and either a Solana connection or onConfirm. Optional token choices, spendable balance, and estimated fee are validated before the wallet is requested.",
       "files": [
         {
           "path": "registry/uxdotsol/flows/quick-send-flow.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/flows/quick-send-flow.tsx"
+        }
+      ]
+    },
+    {
+      "name": "token-discovery-safety-flow",
+      "type": "registry:component",
+      "title": "Token Discovery and Safety Flow",
+      "description": "Combines provider-backed token search, explicit provider errors, token selection, and normalized safety disclosure.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-token-list.json",
+        "https://uxdotsol.xyz/r/token-safety-disclosure.json"
+      ],
+      "docs": "Requires JUPITER_API_KEY when using the bundled token-list and token-safety routes. Replace either hook adapter when using another provider.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/flows/token-discovery-safety-flow.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/flows/token-discovery-safety-flow.tsx"
+        }
+      ]
+    },
+    {
+      "name": "payment-checkout-flow",
+      "type": "registry:component",
+      "title": "Payment Checkout Flow",
+      "description": "Combines an optional provider conversion quote with an actionable Solana Pay checkout request.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-payment-quote.json",
+        "https://uxdotsol.xyz/r/solana-pay-checkout.json"
+      ],
+      "docs": "The payment request remains authoritative. A provider quote is informational until an application separately builds and executes a swap. Use a unique reconciliation reference for each order.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/flows/payment-checkout-flow.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/flows/payment-checkout-flow.tsx"
+        }
+      ]
+    },
+    {
+      "name": "transaction-recovery-flow",
+      "type": "registry:component",
+      "title": "Transaction Recovery Flow",
+      "description": "Rechecks an existing signature and maps server RPC evidence into a retry-safe transaction timeline.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-payment-status.json",
+        "https://uxdotsol.xyz/r/transaction-progress-timeline.json"
+      ],
+      "docs": "Use this flow before allowing a user to resend after a timeout or navigation interruption. A not-found result is not treated as definitive transaction failure.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/flows/transaction-recovery-flow.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/flows/transaction-recovery-flow.tsx"
+        }
+      ]
+    },
+    {
+      "name": "mobile-wallet-payment-flow",
+      "type": "registry:component",
+      "title": "Mobile Wallet Payment Flow",
+      "description": "Adapts Solana Pay guidance for desktop QR scanning and same-device mobile wallet handoff.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/solana-pay-checkout.json"
+      ],
+      "docs": "Device detection changes guidance only. Payment completion must still come from authoritative server-side reconciliation rather than returning focus to the browser.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/flows/mobile-wallet-payment-flow.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/flows/mobile-wallet-payment-flow.tsx"
         }
       ]
     },
@@ -248,17 +740,108 @@
       ],
       "registryDependencies": [
         "https://uxdotsol.xyz/r/use-private-payment.json",
-        "https://uxdotsol.xyz/r/connect-wallet-btn.json"
+        "https://uxdotsol.xyz/r/connect-wallet-btn.json",
+        "https://uxdotsol.xyz/r/safe-recipient-field.json",
+        "https://uxdotsol.xyz/r/transaction-receipt.json"
       ],
       "docs": "Requires Next.js App Router. Includes a configurable Solana Wallet Adapter provider and is configured for devnet USDC and MagicBlock Private Payments.",
       "files": [
         {
           "path": "registry/uxdotsol/templates/private-transfer.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/templates/private-transfer.tsx"
         },
         {
           "path": "components/solana-provider.tsx",
-          "type": "registry:component"
+          "type": "registry:component",
+          "target": "@components/uxdotsol/components/solana-provider.tsx"
+        }
+      ]
+    },
+    {
+      "name": "spl-token-transfer",
+      "type": "registry:component",
+      "title": "SPL Token Transfer Template",
+      "description": "Complete wallet-connected SPL transfer page with mint metadata, recipient checks, associated-token-account creation, and live transaction lifecycle.",
+      "dependencies": [
+        "buffer@^6.0.3",
+        "lucide-react",
+        "@solana/wallet-adapter-react",
+        "@solana/web3.js"
+      ],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/connect-wallet-btn.json",
+        "https://uxdotsol.xyz/r/safe-recipient-field.json",
+        "https://uxdotsol.xyz/r/transaction-lifecycle.json",
+        "https://uxdotsol.xyz/r/use-token-metadata.json"
+      ],
+      "docs": "Mount the template inside SolanaProvider. The transaction creates the recipient associated token account only when RPC confirms it is missing, then transfers the exact checked atomic amount.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/templates/spl-token-transfer.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/templates/spl-token-transfer.tsx"
+        },
+        {
+          "path": "registry/uxdotsol/lib/token-program.ts",
+          "type": "registry:lib",
+          "target": "@lib/uxdotsol/token-program.ts"
+        }
+      ]
+    },
+    {
+      "name": "merchant-checkout",
+      "type": "registry:component",
+      "title": "Merchant Checkout Template",
+      "description": "Complete merchant payment page composed from provider quoting and Solana Pay checkout primitives.",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/payment-checkout-flow.json"
+      ],
+      "docs": "Mount inside SolanaProvider when browser-wallet submission is enabled. Supply server-verified payment status and a unique order reference in production.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/templates/merchant-checkout.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/templates/merchant-checkout.tsx"
+        }
+      ]
+    },
+    {
+      "name": "payment-tracking-receipt",
+      "type": "registry:component",
+      "title": "Payment Tracking and Receipt Template",
+      "description": "Complete signature lookup page that transitions from live payment tracking to immutable receipt evidence.",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/use-payment-status.json",
+        "https://uxdotsol.xyz/r/transaction-progress-timeline.json",
+        "https://uxdotsol.xyz/r/transaction-receipt.json"
+      ],
+      "docs": "The bundled payment-status route provides the terminal status and slot. Add parsed transaction or indexer evidence when sender, recipient, amount, fee, and timestamp must appear in the receipt.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/templates/payment-tracking-receipt.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/templates/payment-tracking-receipt.tsx"
+        }
+      ]
+    },
+    {
+      "name": "mobile-wallet-payment",
+      "type": "registry:component",
+      "title": "Mobile Wallet Payment Template",
+      "description": "Complete responsive Solana Pay page for desktop QR and same-device mobile wallet payments.",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://uxdotsol.xyz/r/mobile-wallet-payment-flow.json"
+      ],
+      "docs": "Mount inside SolanaProvider for browser-wallet submission. Confirm the order through server-side signature and reference verification before showing paid state.",
+      "files": [
+        {
+          "path": "registry/uxdotsol/templates/mobile-wallet-payment.tsx",
+          "type": "registry:component",
+          "target": "@components/uxdotsol/templates/mobile-wallet-payment.tsx"
         }
       ]
     }

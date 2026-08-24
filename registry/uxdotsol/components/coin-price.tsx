@@ -1,7 +1,7 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import React, { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Copy, Check, TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -97,7 +97,7 @@ function buildPriceUrl(apiUrl: string, tokenName: string) {
 
 function shortenTokenId(value: string) {
   if (value.length <= 12) return value;
-  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+  return `${value.slice(0, 4)}…${value.slice(-4)}`;
 }
 
 function getFallbackSymbol(tokenName: string) {
@@ -121,8 +121,11 @@ function CoinPriceInner({
   const [priceError, setPriceError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const wrapperRef   = useRef<HTMLDivElement>(null);
+  const triggerRef   = useRef<HTMLButtonElement>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogId = useId();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => () => {
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
@@ -166,7 +169,12 @@ function CoinPriceInner({
       if (isPinned && wrapperRef.current && !wrapperRef.current.contains(e.target as Node))
         setIsPinned(false);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsPinned(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isPinned) {
+        setIsPinned(false);
+        triggerRef.current?.focus();
+      }
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown",   onKey);
     return () => {
@@ -241,18 +249,21 @@ function CoinPriceInner({
       onMouseLeave={handleMouseLeave}
     >
       {/* ── Pill ─────────────────────────────────────────────────────────── */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      <button
+        ref={triggerRef}
+        type="button"
         onClick={togglePinned}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
+        aria-controls={dialogId}
+        aria-label={`Open ${name} price details`}
         aria-busy={showSkeleton}
         className={cn(
           "flex h-9 items-center gap-3 rounded-xl px-3",
           "border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950",
           "shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 dark:focus-visible:ring-neutral-700",
+          "transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-[1.02] active:scale-[0.98]",
+          "motion-reduce:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
         )}
       >
         {showSkeleton ? (
@@ -281,17 +292,30 @@ function CoinPriceInner({
             </span>
           </>
         )}
-      </motion.button>
+      </button>
 
       {/* ── Detail card ──────────────────────────────────────────────────── */}
       <AnimatePresence>
         {isOpen ? (
           <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 420, damping: 28 }}
-            className="absolute top-[calc(100%+8px)] left-1/2 z-50 w-72 -translate-x-1/2"
+            id={dialogId}
+            role="dialog"
+            aria-label={`${name} price details`}
+            initial={reduceMotion ? { opacity: 0 } : {
+              opacity: 0,
+              transform: "translateY(6px) scale(0.97)",
+            }}
+            animate={{ opacity: 1, transform: "translateY(0) scale(1)" }}
+            exit={reduceMotion ? { opacity: 0 } : {
+              opacity: 0,
+              transform: "translateY(4px) scale(0.97)",
+            }}
+            transition={{
+              duration: reduceMotion ? 0.2 : 0.18,
+              ease: reduceMotion ? "linear" : [0.23, 1, 0.32, 1],
+            }}
+            style={{ transformOrigin: "top center", translate: "-50% 0" }}
+            className="absolute top-[calc(100%+8px)] left-1/2 z-50 w-72"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
@@ -324,11 +348,29 @@ function CoinPriceInner({
                       </span>
                       <AnimatePresence mode="wait">
                         {copied ? (
-                          <motion.span key="check" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.12 }}>
+                          <motion.span
+                            key="check"
+                            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "scale(0.95)" }}
+                            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, transform: "scale(1)" }}
+                            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "scale(0.95)" }}
+                            transition={{
+                              duration: 0.12,
+                              ease: reduceMotion ? "linear" : [0.23, 1, 0.32, 1],
+                            }}
+                          >
                             <Check className="h-3 w-3 text-emerald-500" />
                           </motion.span>
                         ) : (
-                          <motion.span key="copy" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.12 }}>
+                          <motion.span
+                            key="copy"
+                            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "scale(0.95)" }}
+                            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, transform: "scale(1)" }}
+                            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "scale(0.95)" }}
+                            transition={{
+                              duration: 0.12,
+                              ease: reduceMotion ? "linear" : [0.23, 1, 0.32, 1],
+                            }}
+                          >
                             <Copy className="h-3 w-3 text-neutral-300 group-hover/addr:text-neutral-500 transition-colors dark:text-neutral-600 dark:group-hover/addr:text-neutral-400" />
                           </motion.span>
                         )}
@@ -403,8 +445,8 @@ function CoinPriceInner({
                     </ResponsiveContainer>
                   </ChartContainer>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-[11px] text-neutral-400 dark:text-neutral-500">
-                    {priceError ?? "Loading live price"}
+                  <div role="status" aria-live="polite" className="flex h-full items-center justify-center text-[11px] text-neutral-400 dark:text-neutral-500">
+                    {priceError ?? "Loading live price…"}
                   </div>
                 )}
               </div>
@@ -498,7 +540,7 @@ function Skeleton({
   return (
     <span
       className={cn(
-        "block animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-800",
+        "block motion-safe:animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-800",
         className,
       )}
       style={style}

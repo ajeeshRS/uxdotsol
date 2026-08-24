@@ -422,9 +422,9 @@ export function ChainBadge({
           {s.animate && (
             <span
               className={[
-                "absolute inset-0 rounded-full opacity-0",
+                "absolute inset-0 rounded-full opacity-75 motion-reduce:opacity-35",
                 s.ring,
-                "animate-[chainPulse_2s_ease-in-out_infinite]",
+                "motion-safe:animate-ping",
               ].join(" ")}
             />
           )}
@@ -529,7 +529,7 @@ export function SolanaStatusBadge({ size = "md", onClick }: SolanaStatusBadgePro
           "border border-black/6 dark:border-white/8",
           z.badge,
           z.skeletonH,
-          "animate-pulse",
+          "motion-safe:animate-pulse",
         ].join(" ")}
       />
     );
