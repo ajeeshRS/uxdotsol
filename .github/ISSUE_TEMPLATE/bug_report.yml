@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem in the registry or documentation site.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include private keys, seed phrases, API keys, or sensitive wallet data.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Registry item
+        - Installation
+        - Documentation site
+        - API route
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: item
+    attributes:
+      label: Registry item or page
+      placeholder: connect-wallet-btn or /docs/components/connect-wallet-btn
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the smallest reproducible example and exact steps.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, Node.js version, package manager, and wallet adapter.
+    validations:
+      required: true
