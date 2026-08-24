@@ -17,7 +17,7 @@ export const componentMeta: Record<string, ComponentDocMeta> = {
 
 export const docComponents = registry.items.map((item) => ({
   ...item,
-  meta: componentMeta[item.name],
+  ...(componentMeta[item.name] || {}),
 }));
 
 export const registryHomepage = registry.homepage;
