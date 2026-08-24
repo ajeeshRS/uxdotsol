@@ -18,7 +18,11 @@ export async function generateMetadata(props: {
   const doc = getDocComponent(slug);
 
   return doc
-    ? { title: `${doc.title} | UX.SOL`, description: doc.description }
+    ? {
+        title: `${doc.title} | UX.SOL`,
+        description: doc.description,
+        alternates: { canonical: `/docs/flows/${slug}` },
+      }
     : {};
 }
 
@@ -30,5 +34,5 @@ export default async function FlowPage(props: { params: Promise<{ slug: string }
     notFound();
   }
 
-  return <DocsPageShell slug={params.slug} doc={doc} />;
+  return <DocsPageShell slug={params.slug} doc={doc} previewFullscreen />;
 }

@@ -34,7 +34,7 @@ export function DocsLayoutFrame({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-12 shrink-0 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    "inline-flex min-h-12 shrink-0 items-center border-b-2 px-3 text-sm font-medium transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transform-none",
                     isActive
                       ? "border-[var(--text-primary)] text-[var(--text-primary)]"
                       : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]",

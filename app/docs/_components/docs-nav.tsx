@@ -9,6 +9,14 @@ const hookGroups: Record<string, string> = {
   "use-smart-retry": "Hooks",
   "use-optimistic-transaction": "Hooks",
   "use-token-balance": "Hooks",
+  "use-token-safety": "API hooks",
+  "use-token-list": "API hooks",
+  "use-token-metadata": "API hooks",
+  "use-priority-fee-estimate": "API hooks",
+  "use-payment-quote": "API hooks",
+  "use-payment-status": "API hooks",
+  "use-transaction-history": "API hooks",
+  "use-recipient-validation": "Hooks",
   "use-transaction-simulation": "Hooks",
   "use-transaction-status": "Hooks",
   "use-private-payment": "API hooks",
@@ -69,7 +77,7 @@ export function DocsSidebarNav() {
       <div className="p-2">
         <Link
           href="/registry"
-          className="flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:hover:bg-black"
+          className="flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:hover:bg-black"
           style={{ color: "var(--text-secondary)" }}
         >
           Browse registry
@@ -96,7 +104,7 @@ export function DocsSidebarNav() {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none",
                     isActive ? "font-medium" : "hover:text-[var(--text-primary)]",
                   )}
                   style={{

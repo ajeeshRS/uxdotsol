@@ -18,7 +18,11 @@ export async function generateMetadata(props: {
   const doc = getDocComponent(slug);
 
   return doc
-    ? { title: `${doc.title} | UX.SOL`, description: doc.description }
+    ? {
+        title: `${doc.title} | UX.SOL`,
+        description: doc.description,
+        alternates: { canonical: `/docs/hooks/${slug}` },
+      }
     : {};
 }
 

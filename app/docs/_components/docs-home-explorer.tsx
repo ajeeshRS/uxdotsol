@@ -7,6 +7,14 @@ import { docComponents } from "@/lib/docs";
 import { AddressDisplay } from "@/registry/uxdotsol/components/address-display";
 import { CoinPrice } from "@/registry/uxdotsol/components/coin-price";
 import { ConnectWalletBtn } from "@/registry/uxdotsol/components/connect-wallet-btn";
+import { FeeEstimate } from "@/registry/uxdotsol/components/fee-estimate";
+import { SolanaPayCheckout } from "@/registry/uxdotsol/components/solana-pay-checkout";
+import { SafeRecipientField } from "@/registry/uxdotsol/components/safe-recipient-field";
+import { TokenSafetyDisclosure } from "@/registry/uxdotsol/components/token-safety-disclosure";
+import { TransactionLifecycle } from "@/registry/uxdotsol/components/transaction-lifecycle";
+import { TransactionReceipt } from "@/registry/uxdotsol/components/transaction-receipt";
+import { TransactionProgressTimeline } from "@/registry/uxdotsol/components/transaction-progress-timeline";
+import { TransactionReview } from "@/registry/uxdotsol/components/transaction-review";
 import { UxSolButton } from "@/registry/uxdotsol/components/button";
 import { NFTCard } from "@/registry/uxdotsol/components/nft-card";
 import { NFTCollectionCard } from "@/registry/uxdotsol/components/nft-card-collection";
@@ -18,6 +26,14 @@ const hookGroups: Record<string, string> = {
   "use-smart-retry": "Hooks",
   "use-optimistic-transaction": "Hooks",
   "use-token-balance": "Hooks",
+  "use-token-safety": "API hooks",
+  "use-token-list": "API hooks",
+  "use-token-metadata": "API hooks",
+  "use-priority-fee-estimate": "API hooks",
+  "use-payment-quote": "API hooks",
+  "use-payment-status": "API hooks",
+  "use-transaction-history": "API hooks",
+  "use-recipient-validation": "Hooks",
   "use-transaction-simulation": "Hooks",
   "use-transaction-status": "Hooks",
   "use-private-payment": "API hooks",
@@ -30,6 +46,50 @@ const sections = [
   "Flows",
   "Templates",
 ];
+
+const cardDescriptions: Record<string, string> = {
+  "address-display": "Shorten and copy blockchain addresses.",
+  "connect-wallet-btn": "Connect a Solana wallet and show its status.",
+  "sign-in-with-solana": "Sign in securely with a Solana wallet.",
+  "solana-pay-checkout": "Accept Solana Pay transfers by link or QR code.",
+  "transaction-review": "Review transaction details, fees, and warnings.",
+  "safe-recipient-field": "Validate a Solana recipient before sending.",
+  "token-safety-disclosure": "Show clear token risk and verification signals.",
+  "transaction-lifecycle": "Show each transaction state through confirmation.",
+  "transaction-receipt": "Display transaction details and explorer links.",
+  "transaction-progress-timeline": "Track transaction progress, failures, and retries.",
+  "fee-estimate": "Show an itemized transaction fee estimate.",
+  button: "Reusable buttons with accessible styles and states.",
+  "nft-card": "Present NFT artwork, pricing, and actions.",
+  "nft-card-collection": "Present collection artwork, stats, and items.",
+  "coin-price": "Show token prices and trend details.",
+  "token-swap": "Swap tokens with slippage and confirmation controls.",
+  "status-badge": "Show network or service availability.",
+  "use-token-balance": "Fetch and refresh wallet token balances.",
+  "use-token-safety": "Load normalized token safety states.",
+  "use-recipient-validation": "Check recipient safety through Solana RPC.",
+  "use-transaction-simulation": "Simulate transactions before wallet approval.",
+  "use-smart-retry": "Retry Solana operations with configurable backoff.",
+  "use-transaction-status": "Track a transaction through confirmation.",
+  "use-private-payment": "Build private payment flows with MagicBlock.",
+  "use-token-list": "Search normalized token metadata through an API adapter.",
+  "use-token-metadata": "Load normalized metadata for one token mint.",
+  "use-priority-fee-estimate": "Read recent priority-fee ranges from Solana RPC.",
+  "use-payment-quote": "Request a normalized token conversion quote.",
+  "use-payment-status": "Verify a payment signature through server-side RPC.",
+  "use-transaction-history": "Load recent signatures for a Solana account.",
+  "use-optimistic-transaction": "Manage optimistic transaction updates and rollbacks.",
+  "quick-send-flow": "Send SOL with validation, review, and receipt states.",
+  "token-discovery-safety-flow": "Search tokens and review live safety signals.",
+  "payment-checkout-flow": "Review payment routing before Solana Pay checkout.",
+  "transaction-recovery-flow": "Recheck an existing signature before resending.",
+  "mobile-wallet-payment-flow": "Guide desktop QR and same-device wallet handoff.",
+  "private-transfer": "Start a private devnet USDC payment flow.",
+  "spl-token-transfer": "Send an SPL token with recipient and mint checks.",
+  "merchant-checkout": "Launch a complete merchant Solana Pay checkout.",
+  "payment-tracking-receipt": "Track a payment and show its verified receipt.",
+  "mobile-wallet-payment": "Launch a mobile-friendly payment page.",
+};
 
 function getCategory(item: (typeof docComponents)[number]) {
   const path = item.files?.[0]?.path || "";
@@ -49,11 +109,50 @@ function getHref(item: (typeof docComponents)[number]) {
 
 function getItemTypeLabel(item: (typeof docComponents)[number]) {
   const path = item.files?.[0]?.path || "";
-  if (item.name === "use-private-payment") return "API hook";
+  if (hookGroups[item.name] === "API hooks") return "API hook";
   if (path.includes("hooks")) return "Hook";
   if (path.includes("flows")) return "Flow";
   if (path.includes("templates")) return "Template";
   return "Component";
+}
+
+function SolanaPreviewMark({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="https://solana.com/src/img/branding/solanaLogoMark.svg"
+      alt=""
+      width={32}
+      height={32}
+      className={`brightness-0 invert dark:invert-0 ${className}`}
+    />
+  );
+}
+
+function SignInWithSolanaCardPreview() {
+  return (
+    <div className="w-98 rounded-[22px] border border-zinc-200 bg-white px-8 py-10 text-zinc-950 shadow-[0_20px_60px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-[#111113] dark:text-zinc-50 dark:shadow-[0_20px_60px_rgba(0,0,0,0.32)]">
+      <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] dark:bg-zinc-100 dark:text-zinc-950 dark:shadow-[0_12px_24px_rgba(0,0,0,0.28)]">
+        <SolanaPreviewMark className="size-8" />
+      </div>
+
+      <p className="mt-7 text-center text-[32px] font-bold leading-10 tracking-[-0.04em] text-zinc-950 dark:text-zinc-50">
+        Sign in with Solana
+      </p>
+      <p className="mt-3 text-center text-sm text-zinc-500 dark:text-zinc-400">
+        Connect your wallet to continue securely.
+      </p>
+
+      <div className="mt-8 flex min-h-15 w-full items-center justify-center gap-3 rounded-2xl bg-zinc-950 px-5 text-base font-semibold text-white opacity-70 shadow-[0_10px_24px_rgba(0,0,0,0.16)] dark:bg-zinc-100 dark:text-zinc-950">
+        <SolanaPreviewMark className="size-5" />
+        Connect Wallet First
+      </div>
+    </div>
+  );
 }
 
 function getComponentPreview(name: string) {
@@ -68,9 +167,58 @@ function getComponentPreview(name: string) {
     case "connect-wallet-btn":
       return (
         <SolanaProvider>
-          <ConnectWalletBtn />
+          <ConnectWalletBtn className="shrink-0" showMenuToggle={false} />
         </SolanaProvider>
       );
+    case "sign-in-with-solana":
+      return <SignInWithSolanaCardPreview />;
+    case "solana-pay-checkout":
+      return (
+        <SolanaProvider>
+          <SolanaPayCheckout
+            recipient="FvJ8k8HhXp4a3zQyFMZd4FvEqcYdYE7gSZWxrEBRfBsB"
+            amount={0.025}
+            merchantName="UX.SOL Store"
+            description="Order checkout"
+            orderId="#2048"
+          />
+        </SolanaProvider>
+      );
+    case "transaction-review":
+      return (
+        <TransactionReview
+          intent={{
+            kind: "transfer",
+            pay: { value: "1.25", symbol: "SOL", fiatValue: "≈ $182.40" },
+            recipient: {
+              label: "ux.sol",
+              address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosg88R",
+              verified: true,
+            },
+            network: { cluster: "devnet" },
+            fees: [{ label: "Network fee", value: "0.000005 SOL" }],
+            walletDebit: { value: "1.250005", symbol: "SOL" },
+          }}
+        />
+      );
+    case "safe-recipient-field":
+      return <SafeRecipientField showDetails={false} />;
+    case "token-safety-disclosure":
+      return (
+        <TokenSafetyDisclosure
+          mint={null}
+          compact
+          showExplorerLink={false}
+        />
+      );
+    case "transaction-lifecycle":
+      return <TransactionLifecycle showReset={false} />;
+    case "transaction-receipt":
+      return <TransactionReceipt />;
+    case "transaction-progress-timeline":
+      return <TransactionProgressTimeline />;
+    case "fee-estimate":
+      return <FeeEstimate />;
     case "button":
       return (
         <div className="flex flex-wrap items-center justify-center gap-2">
@@ -99,7 +247,6 @@ function getComponentPreview(name: string) {
           href="https://www.madlads.com"
           tilt={false}
           tiltIntensity={28}
-          onBuy={() => {}}
           className=""
         />
       );
@@ -148,32 +295,77 @@ function getPreviewLayout(name: string) {
   switch (name) {
     case "nft-card":
       return {
-        frame: "h-55",
-        inner: "scale-[0.44]",
+        frame: "h-60",
+        inner: "scale-[0.40]",
       };
     case "nft-card-collection":
       return {
-        frame: "h-55",
-        inner: "scale-[0.48]",
+        frame: "h-60",
+        inner: "scale-[0.42]",
       };
     case "token-swap":
       return {
-        frame: "h-55",
-        inner: "scale-[0.44]",
+        frame: "h-60",
+        inner: "scale-[0.40]",
       };
     case "coin-price":
       return {
-        frame: "h-55",
+        frame: "h-60",
         inner: "scale-100",
       };
     case "status-badge":
       return {
-        frame: "h-55",
+        frame: "h-60",
         inner: "scale-[0.78]",
+      };
+    case "sign-in-with-solana":
+      return {
+        frame: "h-60",
+        inner: "scale-[0.38]",
+      };
+    case "solana-pay-checkout":
+      return {
+        frame: "h-60",
+        inner: "scale-[0.25]",
+      };
+    case "transaction-review":
+      return {
+        frame: "h-60",
+        inner: "scale-[0.30]",
+      };
+    case "safe-recipient-field":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.82]",
+      };
+    case "token-safety-disclosure":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.75]",
+      };
+    case "transaction-lifecycle":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.32]",
+      };
+    case "transaction-receipt":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.75]",
+      };
+    case "transaction-progress-timeline":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.75]",
+      };
+    case "fee-estimate":
+      return {
+        frame: "h-60",
+        inner: "w-full scale-[0.50]",
       };
     default:
       return {
-        frame: "h-55",
+        frame: "h-60",
         inner: "scale-100",
       };
   }
@@ -238,7 +430,7 @@ export function DocsHomeExplorer() {
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-black/5 hover:text-foreground active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 motion-reduce:transform-none dark:hover:bg-white/10 dark:focus-visible:ring-white/15"
               aria-label="Clear registry search"
               title="Clear search"
             >
@@ -275,7 +467,7 @@ export function DocsHomeExplorer() {
                 </span>
               </h2>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 md:auto-rows-fr md:grid-cols-2 xl:grid-cols-3">
                 {group.items.map((item) => {
                   const href = getHref(item);
                   const isComponent = group.section === "Components";
@@ -288,9 +480,7 @@ export function DocsHomeExplorer() {
                   return (
                     <div
                       key={item.name}
-                      className={`group relative flex cursor-pointer overflow-hidden rounded-[30px] border border-[#f4f4f4] bg-white p-5 transition-[translate,border-color] duration-300 ease-in-out hover:-translate-y-1 hover:border-[#eaeaea] dark:border-[#141414] dark:bg-neutral-950 dark:hover:border-[#1c1c1c] sm:p-6 ${
-                        isComponent ? "min-h-100" : "min-h-90"
-                      }`}
+                      className="group relative flex cursor-pointer overflow-hidden rounded-[30px] border border-[#f4f4f4] bg-white p-5 transition-[translate,border-color] duration-200 ease-[var(--ease-in-out)] hover:-translate-y-1 hover:border-[#eaeaea] motion-reduce:transform-none dark:border-[#141414] dark:bg-neutral-950 dark:hover:border-[#1c1c1c] sm:p-6"
                     >
                       <Link
                         href={href}
@@ -302,7 +492,7 @@ export function DocsHomeExplorer() {
                           <div
                             inert
                             aria-hidden="true"
-                            className={`pointer-events-none flex ${previewLayout.frame} w-full select-none items-center justify-center overflow-hidden rounded-[22px] bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] px-4 dark:bg-black`}
+                            className={`pointer-events-none flex ${previewLayout.frame} w-full select-none items-center justify-center overflow-hidden rounded-[22px] bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] p-4 dark:bg-black`}
                           >
                             <div
                               className={`flex max-w-full origin-center items-center justify-center ${previewLayout.inner}`}
@@ -314,7 +504,7 @@ export function DocsHomeExplorer() {
                           <div
                             inert
                             aria-hidden="true"
-                            className="pointer-events-none flex h-55 w-full select-none items-center justify-center overflow-hidden rounded-[22px] bg-[url('/item-bg-light.png')] bg-cover bg-center px-4 dark:bg-[url('/item-bg.png')]"
+                            className="pointer-events-none flex h-60 w-full select-none items-center justify-center overflow-hidden rounded-[22px] bg-[url('/item-bg-light.png')] bg-cover bg-center p-4 dark:bg-[url('/item-bg.png')]"
                           >
                             <span className="rounded-full border border-white/15 bg-black/35 px-4 py-2 text-sm font-medium text-white shadow-sm backdrop-blur-md">
                               {itemTypeLabel}
@@ -322,22 +512,24 @@ export function DocsHomeExplorer() {
                           </div>
                         )}
 
-                        <div className="mt-7">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <div className="mt-5">
+                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                             {itemTypeLabel}
                           </p>
                           <h3
-                            className="text-balance text-[24px] font-semibold leading-[1.05] tracking-normal"
+                            className="text-[24px] font-semibold leading-[1.1] tracking-normal"
                             style={{ color: "var(--text-primary)" }}
                           >
-                            {item.title ?? item.name}
+                            <span className="line-clamp-2 text-balance">
+                              {item.title ?? item.name}
+                            </span>
                           </h3>
                           {item.description ? (
                             <p
-                              className="mt-3 line-clamp-2 text-sm leading-6"
+                              className="mt-2 line-clamp-2 text-sm leading-5"
                               style={{ color: "var(--text-secondary)" }}
                             >
-                              {item.description}
+                              {cardDescriptions[item.name] ?? item.description}
                             </p>
                           ) : null}
                         </div>

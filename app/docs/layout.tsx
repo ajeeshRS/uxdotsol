@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Documentation | UX.SOL",
   description:
     "Install and use UX.SOL components, hooks, flows, and templates.",
+  alternates: { canonical: "/docs" },
 };
 
 export default function DocsLayout({

@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ComponentPreview } from "@/app/docs/_components/component-preview";
+import dynamic from "next/dynamic";
 import TerminalCodeBlock from "@/app/docs/_components/terminal-code-block";
+import { createRegistryInstallCommands } from "@/lib/install-commands";
 import type { PropDoc } from "@/lib/docs";
+
+const ComponentPreview = dynamic(() =>
+  import("@/app/docs/_components/component-preview").then(
+    (module) => module.ComponentPreview,
+  ),
+);
 
 type DocsPageShellDoc = {
   title: string;
@@ -19,9 +26,11 @@ type DocsPageShellDoc = {
 export function DocsPageShell({
   slug,
   doc,
+  previewFullscreen = false,
 }: {
   slug: string;
   doc: DocsPageShellDoc;
+  previewFullscreen?: boolean;
 }) {
   const isHook = doc.type === "registry:hook";
   const sections = useMemo(
@@ -97,7 +106,7 @@ export function DocsPageShell({
           </p>
         </div>
 
-      {!isHook && (
+      {!isHook ? (
         <section id="preview" className="scroll-m-24 space-y-4">
           <h2
             className="text-2xl font-semibold tracking-tight"
@@ -105,9 +114,12 @@ export function DocsPageShell({
           >
             Preview
           </h2>
-          <ComponentPreview slug={slug} />
+          <ComponentPreview
+            slug={slug}
+            allowFullscreen={previewFullscreen}
+          />
         </section>
-      )}
+      ) : null}
 
       <section id="installation" className="scroll-m-24 space-y-4">
         <h2
@@ -118,6 +130,7 @@ export function DocsPageShell({
         </h2>
         <TerminalCodeBlock
           code={`npx shadcn@latest add https://uxdotsol.xyz/r/${slug}.json`}
+          packageManagerCommands={createRegistryInstallCommands(slug)}
           label="terminal"
         />
       </section>
@@ -132,10 +145,12 @@ export function DocsPageShell({
         {Array.isArray(doc.usage) ? (
           doc.usage.map((snippet: string, idx: number) => {
             let label = "usage";
-            if (slug === "connect-wallet-btn") {
-              label = ["usage", ".env.local"][idx] || "usage";
-            }
-            if (slug === "coin-price") {
+            if (
+              slug === "connect-wallet-btn" ||
+              slug === "sign-in-with-solana" ||
+              slug === "coin-price" ||
+              slug === "use-token-safety"
+            ) {
               label = ["usage", ".env.local"][idx] || "usage";
             }
             return (
@@ -184,7 +199,7 @@ export function DocsPageShell({
                 aria-current={
                   activeSection === section.id ? "location" : undefined
                 }
-                className="rounded-xl px-3 py-2 text-sm text-neutral-500 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-neutral-400 dark:hover:bg-black dark:hover:text-white"
+                className="rounded-xl px-3 py-2 text-sm text-neutral-500 transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] hover:text-neutral-950 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:text-neutral-400 dark:hover:bg-black dark:hover:text-white"
                 style={{
                   background:
                     activeSection === section.id

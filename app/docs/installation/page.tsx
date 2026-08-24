@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TerminalCodeBlock from "@/app/docs/_components/terminal-code-block";
+import { createRegistryInstallCommands } from "@/lib/install-commands";
 
 export const metadata: Metadata = {
   title: "Installation | UX.SOL",
   description: "Install UX.SOL registry items in a React or Next.js project.",
+  alternates: { canonical: "/docs/installation" },
 };
 
 export default function InstallationDocsPage() {
@@ -48,6 +50,9 @@ export default function InstallationDocsPage() {
 
           <TerminalCodeBlock
             code="npx shadcn@latest add https://uxdotsol.xyz/r/address-display.json"
+            packageManagerCommands={createRegistryInstallCommands(
+              "address-display",
+            )}
             label="terminal"
             className="mt-4"
           />
@@ -59,11 +64,13 @@ export default function InstallationDocsPage() {
           </h2>
           <p className="text-neutral-600 dark:text-neutral-300">
             Each item declares its files and dependencies. After installation,
-            import the copied component, hook, flow, or template into your app.
+            import it from the namespaced <code>components/uxdotsol</code> or
+            {" "}
+            <code>hooks/uxdotsol</code> folder.
           </p>
 
           <TerminalCodeBlock
-            code={'import { AddressDisplay } from "@/components/address-display";'}
+            code={'import { AddressDisplay } from "@/components/uxdotsol/components/address-display";'}
             label="usage"
             className="mt-4"
           />

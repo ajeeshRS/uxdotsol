@@ -1,33 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import {
+  PACKAGE_MANAGERS,
+  type PackageManager,
+  type PackageManagerCommands,
+} from "@/lib/install-commands";
 
 type TerminalCodeBlockProps = {
   code: string;
   label?: string;
   className?: string;
+  packageManagerCommands?: PackageManagerCommands;
 };
 
 export default function TerminalCodeBlock({
   code,
   label = "terminal",
   className,
+  packageManagerCommands,
 }: TerminalCodeBlockProps) {
+  const [packageManager, setPackageManager] = useState<PackageManager>("npm");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
     "idle",
   );
+  const copyResetTimer = useRef<number | null>(null);
+  const activeCode = packageManagerCommands?.[packageManager] ?? code;
+  const packageManagerIndex = PACKAGE_MANAGERS.indexOf(packageManager);
+
+  const resetCopyState = () => {
+    setCopyState("idle");
+    if (copyResetTimer.current) {
+      window.clearTimeout(copyResetTimer.current);
+      copyResetTimer.current = null;
+    }
+  };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(activeCode);
       setCopyState("copied");
     } catch {
       setCopyState("error");
     }
 
-    window.setTimeout(() => setCopyState("idle"), 1600);
+    if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = window.setTimeout(() => {
+      setCopyState("idle");
+      copyResetTimer.current = null;
+    }, 1600);
   };
+
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current);
+    },
+  );
 
   return (
     <div
@@ -36,7 +65,7 @@ export default function TerminalCodeBlock({
       }`}
     >
       {/* Header bar */}
-      <div className="flex items-center justify-between border-b border-[#f4f4f4] px-5 py-3 dark:border-[#141414]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f4f4f4] px-5 py-3 dark:border-[#141414]">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5" aria-hidden="true">
             <span className="h-2.5 w-2.5 rounded-full bg-[#eaeaea] dark:bg-[#1c1c1c]" />
@@ -48,31 +77,81 @@ export default function TerminalCodeBlock({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-label={
-            copyState === "error"
-              ? "Copy failed. Select the code manually."
-              : copyState === "copied"
-                ? "Code copied"
-                : "Copy code"
-          }
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-500 transition-colors duration-150 hover:bg-[var(--surface-secondary)] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-neutral-500 dark:hover:bg-black dark:hover:text-white"
-        >
-          {copyState === "copied" ? (
-            <Check size={14} aria-hidden="true" />
-          ) : (
-            <Copy size={14} aria-hidden="true" />
-          )}
-          <span aria-live="polite">
-            {copyState === "copied"
-              ? "Copied"
-              : copyState === "error"
-                ? "Copy failed"
-                : "Copy"}
-          </span>
-        </button>
+        <div className="flex items-center gap-2">
+          {packageManagerCommands ? (
+            <div
+              className="relative grid grid-cols-4 items-center rounded-xl bg-[var(--surface-secondary)] p-1 dark:bg-black"
+              role="group"
+              aria-label="Package manager"
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-1 left-1 rounded-lg bg-white shadow-sm transition-transform duration-200 ease-[var(--ease-in-out)] motion-reduce:transition-none dark:bg-neutral-900"
+                style={{
+                  width: "calc((100% - 0.5rem) / 4)",
+                  transform: `translateX(${packageManagerIndex * 100}%)`,
+                }}
+              />
+              {PACKAGE_MANAGERS.map((manager) => (
+                <button
+                  key={manager}
+                  type="button"
+                  aria-pressed={packageManager === manager}
+                  onClick={() => {
+                    setPackageManager(manager);
+                    resetCopyState();
+                  }}
+                  className={`relative z-10 min-h-9 cursor-pointer rounded-lg px-2.5 font-mono text-[11px] font-medium transition-colors duration-150 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    packageManager === manager
+                      ? "text-neutral-950 dark:text-white"
+                      : "text-neutral-500 hover:text-neutral-950 dark:text-neutral-500 dark:hover:text-white"
+                  }`}
+                >
+                  {manager}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label={
+              copyState === "error"
+                ? "Copy failed. Select the code manually."
+                : copyState === "copied"
+                  ? "Code copied"
+                  : "Copy code"
+            }
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-500 transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[var(--surface-secondary)] hover:text-neutral-950 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:text-neutral-500 dark:hover:bg-black dark:hover:text-white"
+          >
+            <span className="relative size-3.5" aria-hidden="true">
+              <Copy
+                size={14}
+                className={`absolute inset-0 transition-[opacity,transform,filter] duration-150 ease-[var(--ease-out)] motion-reduce:transform-none motion-reduce:blur-0 ${
+                  copyState === "copied"
+                    ? "scale-95 opacity-0 blur-[2px]"
+                    : "scale-100 opacity-100 blur-0"
+                }`}
+              />
+              <Check
+                size={14}
+                className={`absolute inset-0 transition-[opacity,transform,filter] duration-150 ease-[var(--ease-out)] motion-reduce:transform-none motion-reduce:blur-0 ${
+                  copyState === "copied"
+                    ? "scale-100 opacity-100 blur-0"
+                    : "scale-95 opacity-0 blur-[2px]"
+                }`}
+              />
+            </span>
+            <span aria-live="polite">
+              {copyState === "copied"
+                ? "Copied"
+                : copyState === "error"
+                  ? "Copy failed"
+                  : "Copy"}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Code area */}
@@ -80,7 +159,7 @@ export default function TerminalCodeBlock({
         <code
           className="font-mono text-[0.82rem] leading-6 text-neutral-800 dark:text-neutral-200 md:text-[0.88rem]"
         >
-          {renderCode(code, label)}
+          {renderCode(activeCode, label)}
         </code>
       </pre>
     </div>

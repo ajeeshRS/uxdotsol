@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import TerminalCodeBlock from "@/app/docs/_components/terminal-code-block";
+import { createRegistryInstallCommands } from "@/lib/install-commands";
 
 const sections = [
   { id: "introduction", title: "Introduction" },
@@ -94,6 +95,9 @@ export default function DocsPage() {
           </h2>
           <TerminalCodeBlock
             code="npx shadcn@latest add https://uxdotsol.xyz/r/address-display.json"
+            packageManagerCommands={createRegistryInstallCommands(
+              "address-display",
+            )}
             label="terminal"
           />
         </section>
@@ -129,7 +133,7 @@ export default function DocsPage() {
                 aria-current={
                   activeSection === section.id ? "location" : undefined
                 }
-                className="rounded-xl px-3 py-2 text-sm text-neutral-500 transition-colors hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] hover:text-neutral-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-neutral-400 dark:hover:bg-black dark:hover:text-white"
+                className="rounded-xl px-3 py-2 text-sm text-neutral-500 transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] hover:text-neutral-950 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:text-neutral-400 dark:hover:bg-black dark:hover:text-white"
                 style={{
                   background:
                     activeSection === section.id

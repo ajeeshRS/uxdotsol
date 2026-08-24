@@ -1,3 +1,11 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Registry Setup | UX.SOL",
+  description: "Install UX.SOL items through the standard shadcn registry flow.",
+  alternates: { canonical: "/docs/registry" },
+};
+
 export default function RegistryDocsPage() {
   return (
     <div className="max-w-5xl space-y-10 pb-16">
@@ -26,7 +34,7 @@ export default function RegistryDocsPage() {
         ].map(([step, title, body]) => (
           <div
             key={step}
-            className="rounded-[30px] border border-[#f4f4f4] bg-white p-5 transition duration-300 hover:border-[#eaeaea] dark:border-[#141414] dark:bg-neutral-950 dark:hover:border-[#1c1c1c]"
+            className="rounded-[30px] border border-[#f4f4f4] bg-white p-5 dark:border-[#141414] dark:bg-neutral-950"
           >
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] text-sm font-semibold text-neutral-950 dark:bg-black dark:text-white">
               {step}
