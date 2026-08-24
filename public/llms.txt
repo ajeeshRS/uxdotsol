@@ -1,0 +1,73 @@
+# UX.SOL
+
+> UX.SOL is an open-source, shadcn-compatible source registry for building Solana product experiences. It currently distributes 41 installable components, hooks, flows, templates, and selected Next.js API routes.
+
+Key facts: UX.SOL is not a required runtime SDK. The shadcn CLI copies readable TypeScript and TSX source into the consumer application. Each registry item declares its files, npm dependencies, UX.SOL dependencies, environment variables, and implementation notes in `registry.json`.
+
+## Agent Quickstart
+
+1. Search the [registry browser](https://uxdotsol.xyz/registry) or read the [complete agent reference](https://uxdotsol.xyz/llms-full.txt).
+2. Inspect the item's documentation and registry JSON before installation.
+3. Install with `pnpm dlx shadcn@latest add https://uxdotsol.xyz/r/<item-name>.json`.
+4. Review the installed source, configure declared environment variables, and connect real wallet, RPC, indexer, or provider adapters.
+5. Test wallet actions on Solana devnet unless the item explicitly documents another cluster.
+
+Example: `pnpm dlx shadcn@latest add https://uxdotsol.xyz/r/quick-send-flow.json`.
+
+## Product Model
+
+- Components are reusable interface primitives such as wallet connection, transaction review, receipts, safety disclosures, token data, and payment UI.
+- Hooks provide provider-neutral state and interaction logic for balances, simulation, retry, payment verification, token discovery, recipient validation, and transaction status.
+- Flows compose multiple primitives into guided tasks with review, progress, failure, recovery, and completion states.
+- Templates provide page-level starting points for transfers, checkout, payment tracking, and mobile-wallet payments.
+- Selected items include Next.js API routes when credentials, RPC access, authentication, or authoritative server verification must remain server-side.
+- Installed files use namespaced component, hook, library, and API paths. UX.SOL does not remain in the consumer dependency graph.
+
+## Integration Rules
+
+- Never infer transaction success from a timer, optimistic UI, or wallet popup. Use wallet, RPC, indexer, or server evidence.
+- Never infer payment completion from browser focus or elapsed time. Reconcile the signature and expected payment details server-side.
+- Wallet signing and transaction submission always require explicit user approval.
+- Token and recipient safety signals are informational and must preserve unknown, unavailable, and provider-error states.
+- Keep provider credentials and privileged logic server-side. Environment requirements are declared per item in the registry manifest.
+- Live previews preserve real loading, empty, unknown, error, wallet, RPC, and provider states; they do not fabricate successful results.
+
+## Documentation
+
+- [Documentation home](https://uxdotsol.xyz/docs): Product model and documentation entry point.
+- [Installation](https://uxdotsol.xyz/docs/installation): shadcn CLI workflow, aliases, and installed paths.
+- [Registry browser](https://uxdotsol.xyz/registry): Search and filter all current items.
+- [Component example](https://uxdotsol.xyz/docs/components/transaction-review): Transaction review UI and API details.
+- [Hook example](https://uxdotsol.xyz/docs/hooks/use-transaction-status): RPC-backed transaction status logic.
+- [Flow example](https://uxdotsol.xyz/docs/flows/quick-send-flow): Composed send workflow.
+- [Template example](https://uxdotsol.xyz/docs/templates/merchant-checkout): Page-level checkout foundation.
+
+## Machine-readable References
+
+- [Complete registry reference](https://uxdotsol.xyz/llms-full.txt): Every item grouped by category with install URLs, files, dependencies, environment variables, and implementation notes.
+- [Registry manifest](https://uxdotsol.xyz/r/registry.json): Canonical machine-readable item definitions and relationships.
+- Registry item pattern: `https://uxdotsol.xyz/r/<item-name>.json`.
+- Documentation pattern: `https://uxdotsol.xyz/docs/<components|hooks|flows|templates>/<item-name>`.
+
+## Source Map
+
+- [Authored registry source](https://github.com/ajeeshRS/uxdotsol/tree/main/registry/uxdotsol): Components, hooks, flows, templates, and shared libraries.
+- [Registry manifest source](https://github.com/ajeeshRS/uxdotsol/blob/main/registry.json): Source of truth for distributable items.
+- [Server adapters](https://github.com/ajeeshRS/uxdotsol/tree/main/app/api): Next.js routes bundled by selected registry items.
+- [Documentation metadata](https://github.com/ajeeshRS/uxdotsol/tree/main/lib/docs): Examples, anatomy, states, and API references.
+- [Generated registry output](https://github.com/ajeeshRS/uxdotsol/tree/main/public/r): shadcn-consumable JSON; generated from authored source.
+- [Tests](https://github.com/ajeeshRS/uxdotsol/tree/main/tests): Component, hook, manifest-integrity, and server-policy coverage.
+- [Agent development guide](https://github.com/ajeeshRS/uxdotsol/blob/main/AGENTS.md): Repository conventions, commands, sources of truth, and product invariants.
+
+## Provider Configuration
+
+- `COINGECKO_API_KEY` and `COINGECKO_API_PLAN`: Coin price data.
+- `JUPITER_API_KEY`: Token search, metadata, safety, and payment quotes.
+- `MAINNET_RPC` and `DEVNET_RPC`: Optional Solana RPC overrides for server adapters.
+- `SOLANA_AUTH_SECRET`, `SOLANA_AUTH_ORIGIN`, `SOLANA_AUTH_CHAIN_ID`, and `SOLANA_AUTH_STATEMENT`: Sign In With Solana sessions and domain binding.
+
+## Optional
+
+- [Project README](https://github.com/ajeeshRS/uxdotsol#readme): Local setup and registry contribution workflow.
+- [MIT License](https://github.com/ajeeshRS/uxdotsol/blob/main/LICENSE): Usage and redistribution terms.
+- [shadcn registry schema](https://ui.shadcn.com/schema/registry.json): Upstream registry format used by UX.SOL.
