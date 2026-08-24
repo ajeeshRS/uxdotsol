@@ -19,6 +19,15 @@
       }
     ],
     "paths": {
+      "@/components/uxdotsol/components/*": [
+        "./registry/uxdotsol/components/*"
+      ],
+      "@/components/uxdotsol/flows/*": ["./registry/uxdotsol/flows/*"],
+      "@/components/uxdotsol/templates/*": [
+        "./registry/uxdotsol/templates/*"
+      ],
+      "@/hooks/uxdotsol/*": ["./registry/uxdotsol/hooks/*"],
+      "@/lib/uxdotsol/*": ["./registry/uxdotsol/lib/*"],
       "@/*": ["./*"]
     }
   },
