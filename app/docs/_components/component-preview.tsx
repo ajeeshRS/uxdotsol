@@ -42,6 +42,12 @@ export function ComponentPreview({
     "payment-tracking-receipt",
     "mobile-wallet-payment",
   ].includes(slug);
+  const isFullBleedPreview = [
+    "private-transfer",
+    "merchant-checkout",
+    "payment-tracking-receipt",
+    "mobile-wallet-payment",
+  ].includes(slug);
   const isAuthPreview = slug === "sign-in-with-solana";
   const isCheckoutPreview = slug === "solana-pay-checkout";
   const isReviewPreview = slug === "transaction-review";
@@ -180,7 +186,9 @@ export function ComponentPreview({
                   ? { duration: 0.2, ease: "linear" }
                   : { duration: 0.22, ease: EASE_OUT }
               }
-              className="fixed inset-0 z-[100] flex h-dvh min-h-0 items-center justify-center overflow-hidden border-0 bg-white p-3 dark:bg-neutral-950 sm:p-6"
+              className={`fixed inset-0 z-[100] flex h-dvh min-h-0 items-center justify-center overflow-hidden border-0 bg-white dark:bg-neutral-950 ${
+                isFullBleedPreview ? "p-0" : "p-3 sm:p-6"
+              }`}
               style={{ transformOrigin: "top left" }}
             >
               <button
@@ -193,7 +201,13 @@ export function ComponentPreview({
                 <Minimize2 className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Exit full screen</span>
               </button>
-              <div className="relative flex h-full min-h-0 min-w-0 w-full items-center justify-center overflow-auto rounded-[22px] bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] p-4 dark:bg-black sm:p-6">
+              <div
+                className={`relative flex h-full min-h-0 min-w-0 w-full items-center justify-center overflow-auto bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] dark:bg-black ${
+                  isFullBleedPreview
+                    ? "rounded-none p-0"
+                    : "rounded-[22px] p-4 sm:p-6"
+                }`}
+              >
                 {preview}
               </div>
             </motion.div>

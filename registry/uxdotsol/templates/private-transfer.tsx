@@ -224,22 +224,13 @@ export default function PrivateTransfer() {
           </div>
 
           <form onSubmit={sendPayment} className="space-y-4 p-4.5">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="destination"
-                className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500"
-              >
-                Recipient
-              </label>
-              <SafeRecipientField
-                value={destination}
-                onValueChange={setDestination}
-                connection={connection}
-                sender={publicKey}
-                label="Recipient"
-                name="destination"
-              />
-            </div>
+            <SafeRecipientField
+              value={destination}
+              onValueChange={setDestination}
+              connection={connection}
+              sender={publicKey}
+              name="destination"
+            />
 
             <div className="space-y-1.5">
               <label

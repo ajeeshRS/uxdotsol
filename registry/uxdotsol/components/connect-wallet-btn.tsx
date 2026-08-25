@@ -816,7 +816,7 @@ export function ConnectWalletBtn({
         data-state={walletModalOpen ? "open" : "closed"}
         aria-hidden={!walletModalOpen}
         inert={!walletModalOpen}
-        className="fixed inset-0 z-40 flex items-center justify-center px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md data-[state=open]:visible data-[state=open]:opacity-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_200ms] motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
+        className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md data-[state=open]:visible data-[state=open]:opacity-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_200ms] motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
         onClick={() => setWalletModalOpen(false)}
       >
         <div

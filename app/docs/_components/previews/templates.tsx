@@ -13,7 +13,7 @@ import { DEVNET_USDC_MINT } from "./shared";
 
 export const templatePreviews: Record<string, ReactNode> = {
   "private-transfer": (
-    <div className="max-h-155 w-full overflow-auto rounded-xl">
+    <div className="h-full w-full overflow-auto">
       <SolanaProvider network={WalletAdapterNetwork.Devnet}>
         <PrivateTransfer />
       </SolanaProvider>
