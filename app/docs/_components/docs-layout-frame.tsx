@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DocsSidebarNav } from "@/app/docs/_components/docs-nav";
@@ -7,6 +8,11 @@ import { cn } from "@/lib/utils";
 
 export function DocsLayoutFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (window.location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
 
   return (
     <div
