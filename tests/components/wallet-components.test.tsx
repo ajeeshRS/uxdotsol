@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,10 +54,16 @@ describe("ConnectWalletBtn", () => {
     expect(screen.getByRole("dialog", { name: "Connect Wallet" })).toBeInTheDocument();
     expect(screen.getByText("No wallets found")).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Close" })).toHaveFocus(),
+    );
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Connect wallet" })).toHaveFocus(),
+    );
   });
 
   it("loads connected account data, copies the address, and disconnects", async () => {

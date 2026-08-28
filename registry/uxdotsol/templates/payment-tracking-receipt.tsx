@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   usePaymentStatus,
   type PaymentStatusCluster,
@@ -30,6 +30,7 @@ export function PaymentTrackingReceiptTemplate({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const receiptRef = useRef<HTMLDivElement>(null);
+  const signatureInputId = useId();
   const signature = controlledSignature ?? internalSignature;
   const payment = usePaymentStatus(signature, { cluster });
   const terminal =
@@ -117,11 +118,25 @@ export function PaymentTrackingReceiptTemplate({
         <div className="mb-6"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">Payment tracking</p><h1 className="mt-1 text-2xl font-bold tracking-[-0.04em] text-zinc-950 dark:text-zinc-50">Track and verify receipt</h1></div>
         {!controlledSignature ? (
           <form className="mb-5 flex gap-2" onSubmit={(event) => { event.preventDefault(); setInternalSignature(draft.trim()); }}>
-            <input value={draft} onChange={(event) => setDraft(event.currentTarget.value)} placeholder="Transaction signature" className="min-h-14 min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-white px-4 font-mono text-xs outline-none dark:border-white/12 dark:bg-[#19191B]" />
-            <button className="rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">Track</button>
+            <label htmlFor={signatureInputId} className="sr-only">
+              Transaction signature
+            </label>
+            <input
+              id={signatureInputId}
+              name="transaction-signature"
+              type="text"
+              value={draft}
+              onChange={(event) => setDraft(event.currentTarget.value)}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Transaction signature"
+              required
+              className="min-h-14 min-w-0 flex-1 rounded-2xl border border-zinc-200 bg-white px-4 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/20 dark:border-white/12 dark:bg-[#19191B] dark:focus-visible:ring-white/25"
+            />
+            <button type="submit" className="rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">Track</button>
           </form>
         ) : null}
-        {payment.error ? <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">{payment.error.message}</p> : null}
+        {payment.error ? <p role="alert" className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">{payment.error.message}</p> : null}
         {terminal && payment.data ? (
           <div ref={receiptRef}>
             <TransactionReceipt

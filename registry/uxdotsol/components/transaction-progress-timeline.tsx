@@ -142,7 +142,9 @@ export function TransactionProgressTimeline({
   const resolvedCount = steps.filter(
     (step) => step.status === "complete" || step.status === "skipped",
   ).length;
-  const hasFailure = steps.some((step) => step.status === "failed");
+  const canRetry = steps.some(
+    (step) => step.status === "active" || step.status === "failed",
+  );
 
   return (
     <section
@@ -227,7 +229,7 @@ export function TransactionProgressTimeline({
         })}
       </ol>
 
-      {hasFailure && onRetry ? (
+      {canRetry && onRetry ? (
         <footer className="border-t border-zinc-100 p-4 dark:border-white/8">
           <UxSolButton
             variant="outline"

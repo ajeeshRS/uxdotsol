@@ -3,7 +3,11 @@
 import { type ReactNode, useEffect, useState } from "react";
 
 import TerminalCodeBlock from "@/app/docs/_components/terminal-code-block";
-import { createRegistryInstallCommands } from "@/lib/install-commands";
+import {
+  createPackageInstallCommands,
+  createRegistryInstallCommands,
+  createShadcnAddCommands,
+} from "@/lib/install-commands";
 
 type RegistryFile = {
   path: string;
@@ -119,6 +123,9 @@ export function ManualInstallation({
         <ManualSection title="Install Dependencies">
           <TerminalCodeBlock
             code={`npm install ${installation.dependencies.join(" ")}`}
+            packageManagerCommands={createPackageInstallCommands(
+              installation.dependencies,
+            )}
             label="terminal"
           />
         </ManualSection>
@@ -128,6 +135,9 @@ export function ManualInstallation({
         <ManualSection title="Install Registry Primitives">
           <TerminalCodeBlock
             code={`npx shadcn@latest add ${installation.registryItems.join(" ")}`}
+            packageManagerCommands={createShadcnAddCommands(
+              installation.registryItems,
+            )}
             label="terminal"
           />
         </ManualSection>
@@ -137,7 +147,10 @@ export function ManualInstallation({
         <ManualSection title="Configure Environment Variables">
           <TerminalCodeBlock
             code={Object.entries(installation.envVars)
-              .map(([name, value]) => `${name}=${value ?? ""}`)
+              .map(
+                ([name, value]) =>
+                  `${name}=${getManualEnvValue(name, value)}`,
+              )
               .join("\n")}
             label=".env.local"
           />
@@ -241,6 +254,11 @@ function getUxSolRegistrySlug(dependency: string) {
 function getRegistryItemName(dependency: string) {
   const lastSegment = dependency.split("/").at(-1) ?? dependency;
   return lastSegment.replace(/\.json$/, "");
+}
+
+function getManualEnvValue(name: string, value?: string) {
+  if (value) return value;
+  return name.endsWith("_RPC") ? `YOUR_${name}_URL` : `YOUR_${name}`;
 }
 
 function ManualSection({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
@@ -18,6 +19,9 @@ const previewMap = {
   ...templatePreviews,
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function ComponentPreview({
   slug,
   allowFullscreen = false,
@@ -30,8 +34,10 @@ export function ComponentPreview({
   const embeddedPreviewRef = useRef<HTMLDivElement>(null);
   const fullscreenButtonRef = useRef<HTMLButtonElement>(null);
   const exitFullscreenButtonRef = useRef<HTMLButtonElement>(null);
+  const fullscreenDialogRef = useRef<HTMLDivElement>(null);
   const restoreFullscreenFocusRef = useRef(false);
   const reduceMotion = useReducedMotion();
+  const portalRoot = typeof document === "undefined" ? null : document.body;
   const isFullscreen = allowFullscreen && isExpanded;
   const isHookPreview = slug.startsWith("use-");
   const isFlowPreview = slug.endsWith("-flow");
@@ -76,15 +82,53 @@ export function ComponentPreview({
     if (!fullscreenOrigin) return;
 
     const previousOverflow = document.body.style.overflow;
+    const modalLayer = fullscreenDialogRef.current;
+    const backgroundElements = Array.from(document.body.children)
+      .filter((element): element is HTMLElement =>
+        element instanceof HTMLElement && element !== modalLayer,
+      )
+      .map((element) => ({ element, inert: element.inert }));
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsExpanded(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsExpanded(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !fullscreenDialogRef.current) return;
+      const focusable = Array.from(
+        fullscreenDialogRef.current.querySelectorAll<HTMLElement>(
+          FOCUSABLE_SELECTOR,
+        ),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        fullscreenDialogRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     document.body.style.overflow = "hidden";
+    backgroundElements.forEach(({ element }) => {
+      element.inert = true;
+    });
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = previousOverflow;
+      backgroundElements.forEach(({ element, inert }) => {
+        element.inert = inert;
+      });
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [fullscreenOrigin]);
@@ -146,73 +190,83 @@ export function ComponentPreview({
             </button>
           </div>
         </div>
-        <AnimatePresence
-          onExitComplete={() => {
-            restoreFullscreenFocusRef.current = true;
-            setFullscreenOrigin(null);
-          }}
-        >
-          {isFullscreen ? (
-            <motion.div
-              initial={
-                reduceMotion
-                  ? { opacity: 0 }
-                  : {
-                      opacity: 0,
-                      transform: collapsedTransform,
-                      borderRadius: "30px",
-                    }
-              }
-              animate={
-                reduceMotion
-                  ? { opacity: 1 }
-                  : {
-                      opacity: 1,
-                      transform: "translate(0px, 0px) scale(1, 1)",
-                      borderRadius: "0px",
-                    }
-              }
-              exit={
-                reduceMotion
-                  ? { opacity: 0 }
-                  : {
-                      opacity: 0,
-                      transform: collapsedTransform,
-                      borderRadius: "30px",
-                    }
-              }
-              transition={
-                reduceMotion
-                  ? { duration: 0.2, ease: "linear" }
-                  : { duration: 0.22, ease: EASE_OUT }
-              }
-              className={`fixed inset-0 z-[100] flex h-dvh min-h-0 items-center justify-center overflow-hidden border-0 bg-white dark:bg-neutral-950 ${
-                isFullBleedPreview ? "p-0" : "p-3 sm:p-6"
-              }`}
-              style={{ transformOrigin: "top left" }}
-            >
-              <button
-                ref={exitFullscreenButtonRef}
-                type="button"
-                aria-label="Exit full screen preview"
-                onClick={() => setIsExpanded(false)}
-                className="absolute right-5 top-5 z-20 inline-flex h-10 items-center gap-2 rounded-xl border border-black/10 bg-white/90 px-3 text-sm font-medium text-neutral-700 shadow-sm backdrop-blur transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:border-white/10 dark:bg-neutral-900/90 dark:text-neutral-200 dark:hover:bg-neutral-900"
+        {portalRoot
+          ? createPortal(
+              <AnimatePresence
+                onExitComplete={() => {
+                  restoreFullscreenFocusRef.current = true;
+                  setFullscreenOrigin(null);
+                }}
               >
-                <Minimize2 className="size-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Exit full screen</span>
-              </button>
-              <div
-                className={`relative flex h-full min-h-0 min-w-0 w-full items-center justify-center overflow-auto bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] dark:bg-black ${
-                  isFullBleedPreview
-                    ? "rounded-none p-0"
-                    : "rounded-[22px] p-4 sm:p-6"
-                }`}
-              >
-                {preview}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+                {isFullscreen ? (
+                  <motion.div
+                    ref={fullscreenDialogRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Component preview"
+                    tabIndex={-1}
+                    initial={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : {
+                            opacity: 0,
+                            transform: collapsedTransform,
+                            borderRadius: "30px",
+                          }
+                    }
+                    animate={
+                      reduceMotion
+                        ? { opacity: 1 }
+                        : {
+                            opacity: 1,
+                            transform: "translate(0px, 0px) scale(1, 1)",
+                            borderRadius: "0px",
+                          }
+                    }
+                    exit={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : {
+                            opacity: 0,
+                            transform: collapsedTransform,
+                            borderRadius: "30px",
+                          }
+                    }
+                    transition={
+                      reduceMotion
+                        ? { duration: 0.2, ease: "linear" }
+                        : { duration: 0.22, ease: EASE_OUT }
+                    }
+                    className={`fixed inset-0 z-[100] flex h-dvh min-h-0 items-center justify-center overflow-hidden border-0 bg-white dark:bg-neutral-950 ${
+                      isFullBleedPreview ? "p-0" : "p-3 sm:p-6"
+                    }`}
+                    style={{ transformOrigin: "top left" }}
+                  >
+                    <button
+                      ref={exitFullscreenButtonRef}
+                      type="button"
+                      aria-label="Exit full screen preview"
+                      onClick={() => setIsExpanded(false)}
+                      className="absolute right-5 top-5 z-20 inline-flex h-10 items-center gap-2 rounded-xl border border-black/10 bg-white/90 px-3 text-sm font-medium text-neutral-700 shadow-sm backdrop-blur transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:border-white/10 dark:bg-neutral-900/90 dark:text-neutral-200 dark:hover:bg-neutral-900"
+                    >
+                      <Minimize2 className="size-4" aria-hidden="true" />
+                      <span className="hidden sm:inline">Exit full screen</span>
+                    </button>
+                    <div
+                      className={`relative flex h-full min-h-0 min-w-0 w-full items-center justify-center overflow-auto bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] dark:bg-black ${
+                        isFullBleedPreview
+                          ? "rounded-none p-0"
+                          : "rounded-[22px] p-4 sm:p-6"
+                      }`}
+                    >
+                      {preview}
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>,
+              portalRoot,
+            )
+          : null}
       </>
     );
   }

@@ -128,6 +128,25 @@ describe("TransactionProgressTimeline", () => {
     );
     expect(onRetry).toHaveBeenCalledOnce();
   });
+
+  it("allows rechecking an unresolved active step", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <TransactionProgressTimeline
+        steps={[
+          { id: "lookup", title: "Signature lookup", status: "complete" },
+          { id: "observed", title: "Observed by RPC", status: "active" },
+          { id: "confirmed", title: "Confirmation", status: "pending" },
+        ]}
+        retryLabel="Check again"
+        onRetry={onRetry}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Check again" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });
 
 describe("TransactionReview", () => {

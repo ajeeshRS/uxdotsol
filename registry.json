@@ -29,6 +29,10 @@
         "@solana/wallet-adapter-react",
         "@solana/web3.js"
       ],
+      "envVars": {
+        "MAINNET_RPC": "",
+        "DEVNET_RPC": ""
+      },
       "docs": "Installs a configurable Solana Wallet Adapter provider and a Next.js App Router route at app/api/wallet-account/route.ts. Mount SolanaProvider in the application tree.",
       "files": [
         {

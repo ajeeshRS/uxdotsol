@@ -40,6 +40,8 @@ const subscribeToHydration = () => () => {};
 const getClientHydrationSnapshot = () => true;
 const getServerHydrationSnapshot = () => false;
 const getEmptyWalletSnapshot = () => "";
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 type ClusterValue = "mainnet-beta" | "devnet" | "testnet";
 
@@ -210,6 +212,11 @@ export function ConnectWalletBtn({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
+  const connectTriggerRef = useRef<HTMLButtonElement>(null);
+  const walletModalLayerRef = useRef<HTMLDivElement>(null);
+  const walletModalRef = useRef<HTMLDivElement>(null);
+  const walletModalCloseRef = useRef<HTMLButtonElement>(null);
+  const walletModalReturnFocusRef = useRef<HTMLElement | null>(null);
   /** Pending timeout ID for the copy confirmation reset — cancelled on unmount. */
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountCacheRef = useRef(new Map<string, WalletAccountState>());
@@ -351,14 +358,65 @@ export function ConnectWalletBtn({
    */
   useEffect(() => {
     if (!walletModalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const modalLayer = walletModalLayerRef.current;
+    const previousTarget = walletModalReturnFocusRef.current;
+    const fallbackTarget =
+      dropdownTriggerRef.current ?? connectTriggerRef.current;
+    const backgroundElements = Array.from(document.body.children)
+      .filter((element): element is HTMLElement =>
+        element instanceof HTMLElement && element !== modalLayer,
+      )
+      .map((element) => ({ element, inert: element.inert }));
+
     document.body.style.overflow = "hidden";
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setWalletModalOpen(false);
+    backgroundElements.forEach(({ element }) => {
+      element.inert = true;
+    });
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      walletModalCloseRef.current?.focus();
+    });
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setWalletModalOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !walletModalRef.current) return;
+      const focusable = Array.from(
+        walletModalRef.current.querySelectorAll<HTMLElement>(
+          FOCUSABLE_SELECTOR,
+        ),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        walletModalRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => {
-      document.body.style.overflow = "";
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      backgroundElements.forEach(({ element, inert }) => {
+        element.inert = inert;
+      });
       document.removeEventListener("keydown", handler);
+      window.requestAnimationFrame(() => {
+        (previousTarget?.isConnected ? previousTarget : fallbackTarget)?.focus();
+      });
     };
   }, [walletModalOpen]);
 
@@ -465,6 +523,7 @@ export function ConnectWalletBtn({
    * button elements without causing unnecessary re-renders.
    */
   const openModal = useCallback(() => {
+    walletModalReturnFocusRef.current = document.activeElement as HTMLElement;
     setAccountDropdownOpen(false);
     setWalletModalOpen(true);
   }, []);
@@ -802,6 +861,7 @@ export function ConnectWalletBtn({
         ) : (
           /* ── Disconnected state ── */
           <button
+            ref={connectTriggerRef}
             type="button"
             onClick={openModal}
             aria-label="Connect wallet"
@@ -828,14 +888,17 @@ export function ConnectWalletBtn({
 
       {/* ── Wallet selection modal ── */}
       {portalRoot ? createPortal(<div
+        ref={walletModalLayerRef}
         data-state={walletModalOpen ? "open" : "closed"}
         aria-hidden={!walletModalOpen}
         inert={!walletModalOpen}
-        className="fixed inset-0 z-[110] flex items-center justify-center px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md data-[state=open]:visible data-[state=open]:opacity-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_200ms] motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
+        className="fixed inset-0 z-[110] flex items-center justify-center overscroll-contain px-4 bg-black/40 dark:bg-black/60 backdrop-blur-md data-[state=open]:visible data-[state=open]:opacity-100 data-[state=closed]:invisible data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 [transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_0s] data-[state=closed]:[transition:opacity_150ms_cubic-bezier(0.23,1,0.32,1),visibility_0s_linear_200ms] motion-reduce:[transition:opacity_200ms_ease,visibility_0s_linear_0s] motion-reduce:data-[state=closed]:[transition:opacity_200ms_ease,visibility_0s_linear_200ms]"
         onClick={() => setWalletModalOpen(false)}
       >
         <div
+          ref={walletModalRef}
           data-state={walletModalOpen ? "open" : "closed"}
+          tabIndex={-1}
           className="relative w-full max-w-90 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/8 shadow-xl dark:shadow-[0_32px_100px_rgba(0,0,0,0.7)] overflow-hidden origin-center data-[state=open]:opacity-100 data-[state=open]:translate-y-0 data-[state=open]:scale-100 data-[state=closed]:opacity-0 data-[state=closed]:translate-y-2 data-[state=closed]:scale-[0.97] [transition:opacity_200ms_cubic-bezier(0.23,1,0.32,1),transform_200ms_cubic-bezier(0.23,1,0.32,1)] motion-reduce:data-[state=closed]:translate-y-0 motion-reduce:data-[state=closed]:scale-100 motion-reduce:[transition:opacity_200ms_ease]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
@@ -848,6 +911,7 @@ export function ConnectWalletBtn({
                 Connect Wallet
               </h2>
               <button
+                ref={walletModalCloseRef}
                 type="button"
                 onClick={() => setWalletModalOpen(false)}
                 aria-label="Close"

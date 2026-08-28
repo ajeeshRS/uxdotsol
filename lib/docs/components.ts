@@ -62,8 +62,8 @@ export default function App() {
     </SolanaProvider>
   );
 } `,
-      `MAINNET_RPC=https://mainnet.helius-rpc.com/?api-key=your_key
-DEVNET_RPC=https://devnet.helius-rpc.com/?api-key=your_key`,
+      `MAINNET_RPC=YOUR_MAINNET_RPC_URL
+DEVNET_RPC=YOUR_DEVNET_RPC_URL`,
     ],
     props: [
       {
