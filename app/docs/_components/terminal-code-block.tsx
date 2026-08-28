@@ -13,6 +13,7 @@ type TerminalCodeBlockProps = {
   label?: string;
   className?: string;
   packageManagerCommands?: PackageManagerCommands;
+  collapsible?: boolean;
 };
 
 export default function TerminalCodeBlock({
@@ -20,13 +21,16 @@ export default function TerminalCodeBlock({
   label = "terminal",
   className,
   packageManagerCommands,
+  collapsible = false,
 }: TerminalCodeBlockProps) {
   const [packageManager, setPackageManager] = useState<PackageManager>("npm");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
     "idle",
   );
+  const [isExpanded, setIsExpanded] = useState(false);
   const copyResetTimer = useRef<number | null>(null);
   const activeCode = packageManagerCommands?.[packageManager] ?? code;
+  const canCollapse = collapsible && activeCode.split("\n").length > 22;
   const packageManagerIndex = PACKAGE_MANAGERS.indexOf(packageManager);
 
   const resetCopyState = () => {
@@ -155,13 +159,41 @@ export default function TerminalCodeBlock({
       </div>
 
       {/* Code area */}
-      <pre className="m-3 overflow-x-auto rounded-[22px] bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] px-5 py-4 dark:bg-black">
-        <code
-          className="font-mono text-[0.82rem] leading-6 text-neutral-800 dark:text-neutral-200 md:text-[0.88rem]"
+      <div className="relative">
+        <pre
+          className={`m-3 overflow-x-auto rounded-[22px] bg-[color-mix(in_srgb,var(--surface-secondary)_72%,white)] px-5 py-4 dark:bg-black ${
+            canCollapse && !isExpanded ? "max-h-[420px] overflow-y-hidden" : ""
+          }`}
         >
-          {renderCode(activeCode, label)}
-        </code>
-      </pre>
+          <code
+            className="font-mono text-[0.82rem] leading-6 text-neutral-800 dark:text-neutral-200 md:text-[0.88rem]"
+          >
+            {renderCode(activeCode, label)}
+          </code>
+        </pre>
+        {canCollapse && !isExpanded ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex h-28 items-end justify-center rounded-b-[22px] bg-gradient-to-t from-neutral-50 via-neutral-50/95 to-transparent pb-4 dark:from-black dark:via-black/95">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="pointer-events-auto min-h-10 rounded-xl border border-[#eaeaea] bg-white px-4 text-xs font-medium text-neutral-700 shadow-sm transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-neutral-50 hover:text-neutral-950 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:border-[#242424] dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+            >
+              Expand Code
+            </button>
+          </div>
+        ) : null}
+        {canCollapse && isExpanded ? (
+          <div className="flex justify-center px-3 pb-3">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              className="min-h-10 rounded-xl px-4 text-xs font-medium text-neutral-500 transition-[background-color,color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[var(--surface-secondary)] hover:text-neutral-950 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none dark:text-neutral-400 dark:hover:bg-black dark:hover:text-white"
+            >
+              Collapse Code
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

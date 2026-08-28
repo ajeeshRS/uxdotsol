@@ -2,9 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { DocsTabs } from "@/app/docs/_components/docs-tabs";
+import {
+  CliInstallation,
+  ManualInstallation,
+  type RegistryItemInstallData,
+} from "@/app/docs/_components/registry-item-details";
 import TerminalCodeBlock from "@/app/docs/_components/terminal-code-block";
-import { createRegistryInstallCommands } from "@/lib/install-commands";
 import type { PropDoc } from "@/lib/docs";
+import { EASE_OUT } from "@/lib/motion";
 
 const ComponentPreview = dynamic(() =>
   import("@/app/docs/_components/component-preview").then(
@@ -12,7 +19,9 @@ const ComponentPreview = dynamic(() =>
   ),
 );
 
-type DocsPageShellDoc = {
+const INSTALL_TABS = ["cli", "manual"] as const;
+
+type DocsPageShellDoc = RegistryItemInstallData & {
   title: string;
   type?: string;
   description?: string;
@@ -33,6 +42,12 @@ export function DocsPageShell({
   previewFullscreen?: boolean;
 }) {
   const isHook = doc.type === "registry:hook";
+  const reduceMotion = useReducedMotion();
+  const [installTab, setInstallTab] = useUrlTab(
+    "install",
+    "cli",
+    INSTALL_TABS,
+  );
   const sections = useMemo(
     () =>
       [
@@ -128,11 +143,61 @@ export function DocsPageShell({
         >
           Installation
         </h2>
-        <TerminalCodeBlock
-          code={`npx shadcn@latest add https://uxdotsol.xyz/r/${slug}.json`}
-          packageManagerCommands={createRegistryInstallCommands(slug)}
-          label="terminal"
+        <DocsTabs
+          label="Installation method"
+          value={installTab}
+          onValueChange={setInstallTab}
+          options={[
+            {
+              value: "cli",
+              label: "CLI",
+              panelId: "cli-installation-panel",
+            },
+            {
+              value: "manual",
+              label: "Manual",
+              panelId: "manual-installation-panel",
+            },
+          ]}
         />
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            key={installTab}
+            id={`${installTab}-installation-panel`}
+            role="tabpanel"
+            aria-labelledby={`${installTab}-installation-panel-tab`}
+            initial={
+              reduceMotion
+                ? { opacity: 0 }
+                : {
+                    opacity: 0,
+                    transform:
+                      installTab === "manual"
+                        ? "translateX(6px)"
+                        : "translateX(-6px)",
+                  }
+            }
+            animate={{ opacity: 1, transform: "translateX(0px)" }}
+            exit={{
+              opacity: 0,
+              transition: {
+                duration: reduceMotion ? 0 : 0.1,
+                ease: EASE_OUT,
+              },
+            }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 0.18, ease: EASE_OUT }
+            }
+          >
+            {installTab === "cli" ? (
+              <CliInstallation slug={slug} />
+            ) : (
+              <ManualInstallation slug={slug} item={doc} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </section>
 
       <section id="usage" className="scroll-m-24 space-y-4">
@@ -282,4 +347,41 @@ function DocTable({ title, rows }: { title: string; rows: PropDoc[] }) {
 
 function getSectionId(title: string) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function useUrlTab<T extends string>(
+  parameter: string,
+  defaultValue: T,
+  values: readonly T[],
+) {
+  const [value, setValue] = useState<T>(defaultValue);
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const nextValue = new URL(window.location.href).searchParams.get(parameter);
+      setValue(
+        nextValue && values.includes(nextValue as T)
+          ? (nextValue as T)
+          : defaultValue,
+      );
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    return () => window.removeEventListener("popstate", syncFromUrl);
+  }, [defaultValue, parameter, values]);
+
+  const updateValue = (nextValue: T) => {
+    setValue(nextValue);
+
+    const url = new URL(window.location.href);
+    if (nextValue === defaultValue) {
+      url.searchParams.delete(parameter);
+    } else {
+      url.searchParams.set(parameter, nextValue);
+    }
+    window.history.replaceState(window.history.state, "", url);
+  };
+
+  return [value, updateValue] as const;
 }
