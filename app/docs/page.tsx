@@ -94,9 +94,9 @@ export default function DocsPage() {
             Install an item
           </h2>
           <TerminalCodeBlock
-            code="npx shadcn@latest add https://uxdotsol.xyz/r/address-display.json"
+            code="npx shadcn@latest add https://uxdotsol.xyz/r/{item-name}.json"
             packageManagerCommands={createRegistryInstallCommands(
-              "address-display",
+              "{item-name}",
             )}
             label="terminal"
           />
