@@ -551,10 +551,10 @@ export function ConnectWalletBtn({
 
   return (
     <>
-      <div className={`flex items-center gap-2.5 ${className}`}>
+      <div className={`flex shrink-0 items-center gap-2.5 ${className}`}>
         {/* ── Connected state ── */}
         {connected ? (
-          <div className="relative z-40" ref={dropdownRef}>
+          <div className="relative z-40 shrink-0" ref={dropdownRef}>
             {/* Trigger button */}
             <button
               ref={dropdownTriggerRef}
@@ -562,7 +562,7 @@ export function ConnectWalletBtn({
               onClick={handleAccountDropdownToggle}
               aria-expanded={accountDropdownOpen}
               aria-haspopup="true"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/7 border border-zinc-200 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/11 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-white/7 border border-zinc-200 dark:border-white/10 hover:bg-zinc-200 dark:hover:bg-white/11 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
             >
               <span className="w-1.75 h-1.75 rounded-full bg-emerald-400 shadow-[0_0_0_2.5px_rgba(52,211,153,0.3)] shrink-0" />
               {wallet?.adapter?.icon && (
@@ -645,15 +645,30 @@ export function ConnectWalletBtn({
                 </div>
 
                 <div className="p-3 border-b border-zinc-100 dark:border-white/6">
-                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-100 dark:bg-white/6 p-1">
+                  <div
+                    role="group"
+                    aria-label="Solana cluster"
+                    className="relative isolate grid grid-cols-3 rounded-xl bg-zinc-100 p-1 dark:bg-white/6"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute inset-y-1 left-1 z-0 w-[calc((100%_-_0.5rem)/3)] rounded-lg bg-white shadow-sm transition-transform duration-250 ease-[cubic-bezier(0.77,0,0.175,1)] motion-reduce:transition-none dark:bg-white/10 ${
+                        cluster === "devnet"
+                          ? "translate-x-full"
+                          : cluster === "testnet"
+                            ? "translate-x-[200%]"
+                            : "translate-x-0"
+                      }`}
+                    />
                     {CLUSTERS.map((item) => (
                       <button
                         key={item.value}
                         type="button"
                         onClick={() => setCluster(item.value)}
-                        className={`h-8 rounded-lg text-[11px] font-semibold transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 dark:focus-visible:ring-zinc-50/15 ${
+                        aria-pressed={cluster === item.value}
+                        className={`relative z-10 h-8 cursor-pointer rounded-lg text-[11px] font-semibold transition-colors duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 dark:focus-visible:ring-zinc-50/15 ${
                           cluster === item.value
-                            ? "bg-white dark:bg-white/10 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                            ? "text-zinc-900 dark:text-zinc-100"
                             : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
                         }`}
                       >
@@ -790,7 +805,7 @@ export function ConnectWalletBtn({
             type="button"
             onClick={openModal}
             aria-label="Connect wallet"
-            className="flex items-center gap-2 px-4 py-2.25 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:opacity-80 active:opacity-100 active:scale-[0.98] text-white dark:text-zinc-900 text-[13.5px] font-semibold tracking-tight transition-[background-color,color,opacity,transform,box-shadow] duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
+            className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2.25 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:opacity-80 active:opacity-100 active:scale-[0.98] text-white dark:text-zinc-900 text-[13.5px] font-semibold tracking-tight transition-[background-color,color,opacity,transform,box-shadow] duration-150 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/10 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-zinc-50/15 dark:focus-visible:ring-offset-[#111113]"
           >
             <Wallet size={14} />
             {connecting ? "Connecting…" : "Connect Wallet"}

@@ -568,7 +568,7 @@ export function SolanaPayCheckout({
         </p>
       ) : null}
 
-      <div className="mt-5 grid grid-cols-[1fr_auto] gap-2.5">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-2.5">
         {connected || status !== "ready" ? (
           <button
             type="button"

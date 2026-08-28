@@ -186,7 +186,7 @@ export default function PrivateTransfer() {
           <span className="text-sm font-semibold tracking-tight">
             Private Pay
           </span>
-          <ConnectWalletBtn />
+          <ConnectWalletBtn showMenuToggle={false} />
         </div>
       </nav>
 

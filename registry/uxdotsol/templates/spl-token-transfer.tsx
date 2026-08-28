@@ -111,12 +111,12 @@ export function SplTokenTransferTemplate({
   return (
     <div className={`grid w-full max-w-5xl items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px] ${className}`}>
       <section className="rounded-[24px] border border-zinc-200 bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.04)] dark:border-white/10 dark:bg-[#111113] dark:shadow-[0_20px_60px_rgba(0,0,0,0.32)] sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-white dark:bg-zinc-100 dark:text-zinc-950"><Send size={19} aria-hidden="true" /></span>
-            <div><h1 className="text-base font-semibold tracking-[-0.02em]">SPL token transfer</h1><p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">Validate the mint and recipient before requesting a wallet signature.</p></div>
+            <div className="min-w-0"><h1 className="text-base font-semibold tracking-[-0.02em]">SPL token transfer</h1><p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">Validate the mint and recipient before requesting a wallet signature.</p></div>
           </div>
-          <ConnectWalletBtn showMenuToggle={false} />
+          <ConnectWalletBtn className="shrink-0" showMenuToggle={false} />
         </div>
 
         <div className="mt-6 space-y-4">
