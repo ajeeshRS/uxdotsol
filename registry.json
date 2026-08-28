@@ -383,8 +383,8 @@
       "name": "use-recipient-validation",
       "type": "registry:hook",
       "title": "useRecipientValidation",
-      "description": "Runs local recipient safety rules and inspects the real Solana account through RPC without performing HTTP API abstraction or identity resolution.",
-      "dependencies": ["@solana/web3.js"],
+      "description": "Runs local recipient safety rules and inspects the real Solana account through @solana/kit RPC without requiring a wallet connection or identity provider.",
+      "dependencies": ["@solana/kit"],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-recipient-validation.ts",
@@ -412,7 +412,7 @@
       "type": "registry:hook",
       "title": "useSmartRetry",
       "description": "Retries asynchronous Solana operations with configurable backoff and error handling.",
-      "dependencies": ["@solana/web3.js"],
+      "dependencies": [],
       "files": [
         {
           "path": "registry/uxdotsol/hooks/use-smart-retry.ts",
@@ -524,7 +524,7 @@
       "type": "registry:hook",
       "title": "usePriorityFeeEstimate",
       "description": "Reads recent Solana prioritization-fee samples and exposes normalized low, medium, and high ranges.",
-      "dependencies": ["next", "@solana/web3.js"],
+      "dependencies": ["next", "@solana/kit"],
       "envVars": {
         "MAINNET_RPC": "",
         "DEVNET_RPC": ""
@@ -581,7 +581,7 @@
       "type": "registry:hook",
       "title": "usePaymentStatus",
       "description": "Verifies an existing Solana payment signature through a server RPC adapter with explicit not-found and terminal states.",
-      "dependencies": ["next", "@solana/web3.js"],
+      "dependencies": ["next", "@solana/kit"],
       "envVars": {
         "MAINNET_RPC": "",
         "DEVNET_RPC": ""
@@ -610,7 +610,7 @@
       "type": "registry:hook",
       "title": "useTransactionHistory",
       "description": "Loads recent Solana signatures for an address through a server RPC adapter with cursor-ready normalized results.",
-      "dependencies": ["next", "@solana/web3.js"],
+      "dependencies": ["next", "@solana/kit"],
       "envVars": {
         "MAINNET_RPC": "",
         "DEVNET_RPC": ""

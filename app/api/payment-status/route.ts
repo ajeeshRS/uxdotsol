@@ -1,4 +1,4 @@
-import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { createSolanaRpc, signature as parseSignature } from "@solana/kit";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -11,9 +11,13 @@ function jsonError(code: string, message: string, status: number, retryable = fa
 }
 
 function rpcUrl(cluster: ClusterValue) {
-  if (cluster === "mainnet-beta") return process.env.MAINNET_RPC || clusterApiUrl(cluster);
-  if (cluster === "devnet") return process.env.DEVNET_RPC || clusterApiUrl(cluster);
-  return clusterApiUrl(cluster);
+  if (cluster === "mainnet-beta") {
+    return process.env.MAINNET_RPC || "https://api.mainnet-beta.solana.com";
+  }
+  if (cluster === "devnet") {
+    return process.env.DEVNET_RPC || "https://api.devnet.solana.com";
+  }
+  return "https://api.testnet.solana.com";
 }
 
 export async function GET(request: Request) {
@@ -23,12 +27,18 @@ export async function GET(request: Request) {
   if (!SIGNATURE.test(signature)) return jsonError("INVALID_SIGNATURE", "A valid transaction signature is required.", 400);
   if (!CLUSTERS.has(clusterParam as ClusterValue)) return jsonError("INVALID_CLUSTER", "Unsupported Solana cluster.", 400);
   const cluster = clusterParam as ClusterValue;
+  let transactionSignature;
+  try {
+    transactionSignature = parseSignature(signature);
+  } catch {
+    return jsonError("INVALID_SIGNATURE", "A valid transaction signature is required.", 400);
+  }
 
   try {
-    const response = await new Connection(rpcUrl(cluster), "confirmed").getSignatureStatuses(
-      [signature],
+    const response = await createSolanaRpc(rpcUrl(cluster)).getSignatureStatuses(
+      [transactionSignature],
       { searchTransactionHistory: true },
-    );
+    ).send();
     const value = response.value[0];
     const status = !value
       ? "not_found"
@@ -40,8 +50,10 @@ export async function GET(request: Request) {
         signature,
         cluster,
         status,
-        slot: value?.slot ?? null,
-        confirmations: value?.confirmations ?? null,
+        slot: value ? Number(value.slot) : null,
+        confirmations: value?.confirmations === null || value?.confirmations === undefined
+          ? null
+          : Number(value.confirmations),
         error: value?.err ?? null,
       },
     });

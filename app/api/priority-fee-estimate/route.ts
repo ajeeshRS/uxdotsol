@@ -1,4 +1,8 @@
-import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import {
+  address,
+  createSolanaRpc,
+  type Address,
+} from "@solana/kit";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -10,9 +14,13 @@ function jsonError(code: string, message: string, status: number, retryable = fa
 }
 
 function rpcUrl(cluster: ClusterValue) {
-  if (cluster === "mainnet-beta") return process.env.MAINNET_RPC || clusterApiUrl(cluster);
-  if (cluster === "devnet") return process.env.DEVNET_RPC || clusterApiUrl(cluster);
-  return clusterApiUrl(cluster);
+  if (cluster === "mainnet-beta") {
+    return process.env.MAINNET_RPC || "https://api.mainnet-beta.solana.com";
+  }
+  if (cluster === "devnet") {
+    return process.env.DEVNET_RPC || "https://api.devnet.solana.com";
+  }
+  return "https://api.testnet.solana.com";
 }
 
 function percentile(values: number[], ratio: number) {
@@ -27,22 +35,23 @@ export async function GET(request: Request) {
     return jsonError("INVALID_CLUSTER", "Unsupported Solana cluster.", 400);
   }
 
-  let accounts: PublicKey[];
+  let accounts: Address[];
   try {
-    accounts = searchParams.getAll("account").slice(0, 128).map((value) => new PublicKey(value));
+    accounts = searchParams.getAll("account").slice(0, 128).map(address);
   } catch {
     return jsonError("INVALID_ACCOUNT", "A writable account address is invalid.", 400);
   }
 
   const cluster = clusterParam as ClusterValue;
   try {
-    const samples = await new Connection(rpcUrl(cluster), "confirmed").getRecentPrioritizationFees(
-      accounts.length > 0 ? { lockedWritableAccounts: accounts } : undefined,
-    );
+    const samples = await createSolanaRpc(rpcUrl(cluster))
+      .getRecentPrioritizationFees(accounts.length > 0 ? accounts : undefined)
+      .send();
     const values = samples
-      .map((sample) => sample.prioritizationFee)
+      .map((sample) => Number(sample.prioritizationFee))
       .filter((value) => Number.isFinite(value) && value >= 0)
       .sort((a, b) => a - b);
+    const latestSample = samples.at(-1);
     return NextResponse.json({
       data: {
         cluster,
@@ -51,7 +60,7 @@ export async function GET(request: Request) {
         medium: percentile(values, 0.5),
         high: percentile(values, 0.75),
         sampleSize: values.length,
-        slot: samples.at(-1)?.slot ?? null,
+        slot: latestSample ? Number(latestSample.slot) : null,
       },
     });
   } catch {

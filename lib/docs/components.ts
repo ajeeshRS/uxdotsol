@@ -482,12 +482,9 @@ export default function TransferReview() {
     usage: `"use client";
 
 import { useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { SafeRecipientField } from "@/components/uxdotsol/components/safe-recipient-field";
 
 export function SendRecipient() {
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
   const [recipient, setRecipient] = useState("");
   const [canContinue, setCanContinue] = useState(false);
 
@@ -496,8 +493,7 @@ export function SendRecipient() {
       <SafeRecipientField
         value={recipient}
         onValueChange={setRecipient}
-        connection={connection}
-        sender={publicKey}
+        rpcEndpoint="https://api.devnet.solana.com"
         onValidationChange={(result) => setCanContinue(result.canSubmit)}
       />
       <button disabled={!canContinue}>Continue to review</button>
@@ -518,10 +514,10 @@ export function SendRecipient() {
         description: "Called whenever typing, paste, or clear changes the address.",
       },
       {
-        name: "connection / sender",
-        type: "Connection | null / string | PublicKey | null",
-        defaultValue: "undefined / undefined",
-        description: "Real Solana RPC connection and optional sender used for account and self-recipient checks.",
+        name: "rpcEndpoint / connection / sender",
+        type: "string / { rpcEndpoint: string } | null / string | { toString(): string } | null",
+        defaultValue: "undefined",
+        description: "Direct RPC endpoint, compatible wallet-adapter Connection, and optional sender for account and self-recipient checks.",
       },
       {
         name: "allowSelf",

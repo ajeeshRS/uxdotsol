@@ -2,10 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  PublicKey,
+  address as parseAddress,
+  createSolanaRpc,
+  type Address,
   type Commitment,
-  type Connection,
-} from "@solana/web3.js";
+} from "@solana/kit";
+
+export type RecipientRpcConnection = {
+  rpcEndpoint: string;
+};
+
+export type RecipientAddressInput = string | { toString(): string };
 
 export type RecipientValidationStatus =
   | "idle"
@@ -34,8 +41,9 @@ export type RecipientValidationReason = {
 };
 
 export type RecipientValidationOptions = {
-  connection?: Connection | null;
-  sender?: string | PublicKey | null;
+  rpcEndpoint?: string;
+  connection?: RecipientRpcConnection | null;
+  sender?: RecipientAddressInput | null;
   enabled?: boolean;
   allowSelf?: boolean;
   requireExistingAccount?: boolean;
@@ -53,7 +61,7 @@ export type RecipientValidationValue = {
   accountExists: boolean | null;
   executable: boolean | null;
   owner: string | null;
-  lamports: number | null;
+  lamports: bigint | null;
   reasons: RecipientValidationReason[];
   error: Error | null;
   isValidAddress: boolean;
@@ -71,20 +79,24 @@ export type RecipientLocalValidationOptions = Pick<
 export type RecipientLocalValidation = {
   address: string;
   normalizedAddress: string | null;
-  publicKey: PublicKey | null;
+  parsedAddress: Address | null;
   reasons: RecipientValidationReason[];
   status: "idle" | "invalid" | "blocked" | "warning" | "safe";
 };
 
-function normalizeComparableAddress(value: string | PublicKey | null | undefined) {
+function normalizeComparableAddress(
+  value: RecipientAddressInput | null | undefined,
+) {
   if (!value) return null;
 
+  const rawValue = typeof value === "string" ? value : value.toString();
+  const trimmedValue = rawValue.trim();
+  if (!trimmedValue) return null;
+
   try {
-    return value instanceof PublicKey
-      ? value.toBase58()
-      : new PublicKey(value.trim()).toBase58();
+    return parseAddress(trimmedValue);
   } catch {
-    return typeof value === "string" ? value.trim() : null;
+    return trimmedValue;
   }
 }
 
@@ -107,20 +119,20 @@ export function validateRecipientAddress(
     return {
       address,
       normalizedAddress: null,
-      publicKey: null,
+      parsedAddress: null,
       reasons: [],
       status: "idle",
     };
   }
 
-  let publicKey: PublicKey;
+  let parsedAddress: Address;
   try {
-    publicKey = new PublicKey(address);
+    parsedAddress = parseAddress(address);
   } catch {
     return {
       address,
       normalizedAddress: null,
-      publicKey: null,
+      parsedAddress: null,
       reasons: [
         {
           code: "invalid-address",
@@ -132,7 +144,7 @@ export function validateRecipientAddress(
     };
   }
 
-  const normalizedAddress = publicKey.toBase58();
+  const normalizedAddress = parsedAddress;
   const blocked = normalizeAddressList(options.blockedAddresses);
   const trusted = normalizeAddressList(options.trustedAddresses);
   const sender = normalizeComparableAddress(options.sender);
@@ -141,7 +153,7 @@ export function validateRecipientAddress(
     return {
       address,
       normalizedAddress,
-      publicKey,
+      parsedAddress,
       reasons: [
         {
           code: "blocked-address",
@@ -158,7 +170,7 @@ export function validateRecipientAddress(
     return {
       address,
       normalizedAddress,
-      publicKey,
+      parsedAddress,
       reasons: [
         {
           code: "self-recipient",
@@ -176,7 +188,7 @@ export function validateRecipientAddress(
     return {
       address,
       normalizedAddress,
-      publicKey,
+      parsedAddress,
       reasons: [
         {
           code: "trusted-address",
@@ -191,7 +203,7 @@ export function validateRecipientAddress(
   return {
     address,
     normalizedAddress,
-    publicKey,
+    parsedAddress,
     reasons: [],
     status: "safe",
   };
@@ -214,7 +226,7 @@ function createValue(
     lamports: null,
     reasons: local.reasons,
     error: null,
-    isValidAddress: local.publicKey !== null,
+    isValidAddress: local.parsedAddress !== null,
     isLoading: status === "checking",
     isSafe: status === "safe",
     canSubmit: status === "safe" || status === "warning",
@@ -241,6 +253,7 @@ export function useRecipientValidation(
     debounceMs = 300,
     enabled = true,
     requireExistingAccount = false,
+    rpcEndpoint: configuredRpcEndpoint,
     sender,
     trustedAddresses,
   } = options;
@@ -252,6 +265,11 @@ export function useRecipientValidation(
   const blockedKey = (blockedAddresses ?? []).join(":");
   const trustedKey = (trustedAddresses ?? []).join(":");
   const senderKey = sender?.toString() ?? "";
+  const rpcEndpoint = configuredRpcEndpoint ?? connection?.rpcEndpoint;
+  const rpc = useMemo(
+    () => (rpcEndpoint ? createSolanaRpc(rpcEndpoint) : null),
+    [rpcEndpoint],
+  );
   const normalizedBlockedAddresses = useMemo(
     () => (blockedKey ? blockedKey.split(":") : []),
     [blockedKey],
@@ -281,7 +299,7 @@ export function useRecipientValidation(
   }, []);
   const validationKey = [
     local.normalizedAddress ?? local.address,
-    connection?.rpcEndpoint ?? "no-rpc",
+    rpcEndpoint ?? "no-rpc",
     commitment,
     requireExistingAccount ? "required" : "optional",
     blockExecutableAccounts ? "block-programs" : "allow-programs",
@@ -298,19 +316,24 @@ export function useRecipientValidation(
 
     if (
       !enabled ||
-      !local.publicKey ||
+      !local.parsedAddress ||
       local.status === "invalid" ||
       local.status === "blocked"
     ) {
       return;
     }
 
-    if (!connection) return;
+    if (!rpc) return;
 
     timer = window.setTimeout(() => {
-      void connection
-        .getAccountInfo(local.publicKey!, commitment)
-        .then((account) => {
+      void rpc
+        .getAccountInfo(local.parsedAddress!, {
+          commitment,
+          dataSlice: { offset: 0, length: 0 },
+          encoding: "base64",
+        })
+        .send()
+        .then(({ value: account }) => {
           if (!active) return;
 
           const reasons = [...local.reasons];
@@ -348,7 +371,7 @@ export function useRecipientValidation(
               status,
               accountExists: Boolean(account),
               executable: account?.executable ?? null,
-              owner: account?.owner.toBase58() ?? null,
+              owner: account?.owner ?? null,
               lamports: account?.lamports ?? null,
               reasons,
               isLoading: false,
@@ -398,12 +421,12 @@ export function useRecipientValidation(
   }, [
     blockExecutableAccounts,
     commitment,
-    connection,
     debounceMs,
     enabled,
     local,
     refetch,
     requireExistingAccount,
+    rpc,
     validationKey,
   ]);
 
@@ -414,12 +437,12 @@ export function useRecipientValidation(
   if (
     local.status === "invalid" ||
     local.status === "blocked" ||
-    !local.publicKey
+    !local.parsedAddress
   ) {
     return createValue(local, {}, refetch);
   }
 
-  if (!connection) {
+  if (!rpc) {
     return createValue(
       local,
       {

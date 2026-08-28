@@ -227,15 +227,11 @@ export function TokenSafetyDisclosure({ mint }: { mint: string }) {
       "Recipient validation is client and RPC orchestration, not API abstraction. The hook provides deterministic local policy plus real account properties while leaving name resolution and external risk providers to separate API hooks.",
     usage: `"use client";
 
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useRecipientValidation } from "@/hooks/uxdotsol/use-recipient-validation";
 
 export function RecipientStatus({ recipient }: { recipient: string }) {
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
   const validation = useRecipientValidation(recipient, {
-    connection,
-    sender: publicKey,
+    rpcEndpoint: "https://api.devnet.solana.com",
   });
 
   return (
@@ -255,14 +251,14 @@ export function RecipientStatus({ recipient }: { recipient: string }) {
         description: "Recipient address to validate. Empty input keeps the hook idle.",
       },
       {
-        name: "connection",
-        type: "Connection | null",
+        name: "rpcEndpoint / connection",
+        type: "string / { rpcEndpoint: string } | null",
         defaultValue: "undefined",
-        description: "Solana RPC connection used for the real account lookup.",
+        description: "Direct RPC endpoint or a compatible wallet-adapter Connection used for the real account lookup.",
       },
       {
         name: "sender / allowSelf",
-        type: "string | PublicKey | null / boolean",
+        type: "string | { toString(): string } | null / boolean",
         defaultValue: "undefined / false",
         description: "Optional sender and explicit policy for self-transfers.",
       },
@@ -322,7 +318,7 @@ export function RecipientStatus({ recipient }: { recipient: string }) {
       },
       {
         name: "accountExists / executable / owner / lamports",
-        type: "boolean | null / boolean | null / string | null / number | null",
+        type: "boolean | null / boolean | null / string | null / bigint | null",
         defaultValue: "null",
         description: "Current account properties read from Solana RPC.",
       },
@@ -486,29 +482,32 @@ export function TransferReview({
 
 import { useState } from "react";
 import {
-  LAMPORTS_PER_SOL,
-  type Connection,
-  type PublicKey,
-} from "@solana/web3.js";
+  address,
+  createSolanaRpc,
+} from "@solana/kit";
 import { useSmartRetry } from "@/hooks/uxdotsol/use-smart-retry";
 
 export function SolBalanceRefresh({
-  connection,
+  endpoint,
   owner,
 }: {
-  connection: Connection;
-  owner: PublicKey;
+  endpoint: string;
+  owner: string;
 }) {
-  const [balance, setBalance] = useState<number | null>(null);
-  const retry = useSmartRetry<number>({ client: connection, maxAttempts: 4 });
+  const rpc = createSolanaRpc(endpoint);
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const retry = useSmartRetry<bigint>({ client: rpc, maxAttempts: 4 });
 
   async function refreshBalance() {
     setBalance(null);
     try {
-      const lamports = await retry.execute(() =>
-        connection.getBalance(owner, "confirmed"),
-      );
-      setBalance(lamports / LAMPORTS_PER_SOL);
+      const lamports = await retry.execute(async () => {
+        const { value } = await rpc
+          .getBalance(address(owner), { commitment: "confirmed" })
+          .send();
+        return value;
+      });
+      setBalance(lamports);
     } catch {
       // The hook exposes the final error for the UI.
     }
@@ -516,7 +515,12 @@ export function SolBalanceRefresh({
 
   return (
     <section>
-      <p>SOL balance: {balance === null ? "Not loaded" : balance.toFixed(4)}</p>
+      <p>
+        SOL balance:{" "}
+        {balance === null
+          ? "Not loaded"
+          : (Number(balance) / 1_000_000_000).toFixed(4)}
+      </p>
       <button disabled={retry.isRetrying} onClick={refreshBalance}>
         {retry.isRetrying
           ? \`RPC busy, retrying (\${retry.attempt}/4)...\`

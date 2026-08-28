@@ -1,14 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { Connection } from "@solana/web3.js";
 
 type KitSendable<T> = { send: () => Promise<T> };
-type KitRpcLike = {
+export type SmartRetryClient = {
   getLatestBlockhash?: () => KitSendable<unknown> | Promise<unknown>;
 };
-
-export type SmartRetryClient = Connection | KitRpcLike;
 
 export type SolanaRetryReason =
   | "blockhash-expired"

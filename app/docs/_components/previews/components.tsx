@@ -206,24 +206,20 @@ function SolanaPayPreview() {
 }
 
 export function SafeRecipientFieldPreview() {
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
   const [recipient, setRecipient] = useState("");
   const [canContinue, setCanContinue] = useState(false);
   const [acceptedAddress, setAcceptedAddress] = useState<string | null>(null);
 
   return (
     <div className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#111113]">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-            Check a devnet recipient
-          </p>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Account details come directly from Solana RPC.
-          </p>
-        </div>
-        <PreviewWalletButton />
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+          Check a devnet recipient
+        </p>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          No wallet connection required. Account details come directly from
+          Solana RPC.
+        </p>
       </div>
 
       <SafeRecipientField
@@ -232,8 +228,7 @@ export function SafeRecipientFieldPreview() {
           setRecipient(nextValue);
           setAcceptedAddress(null);
         }}
-        connection={connection}
-        sender={publicKey}
+        rpcEndpoint="https://api.devnet.solana.com"
         onValidationChange={(result) => setCanContinue(result.canSubmit)}
       />
 
@@ -1070,11 +1065,9 @@ export const componentPreviews: Record<string, ReactNode> = {
     </div>
   ),
   "safe-recipient-field": (
-    <SolanaProvider network={WalletAdapterNetwork.Devnet}>
-      <div className="flex min-w-0 w-full max-w-130 items-center justify-center p-2 sm:p-4">
-        <SafeRecipientFieldPreview />
-      </div>
-    </SolanaProvider>
+    <div className="flex min-w-0 w-full max-w-130 items-center justify-center p-2 sm:p-4">
+      <SafeRecipientFieldPreview />
+    </div>
   ),
   "token-safety-disclosure": (
     <div className="flex min-w-0 w-full max-w-130 items-center justify-center p-2 sm:p-4">

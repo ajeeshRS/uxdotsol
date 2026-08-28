@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { Commitment, Connection, PublicKey } from "@solana/web3.js";
+import type { Commitment } from "@solana/kit";
 import {
   CheckCircle2,
   CircleHelp,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import {
   useRecipientValidation,
+  type RecipientAddressInput,
+  type RecipientRpcConnection,
   type RecipientValidationValue,
 } from "@/hooks/uxdotsol/use-recipient-validation";
 
@@ -22,8 +24,9 @@ export type SafeRecipientFieldProps = {
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   onValidationChange?: (validation: RecipientValidationValue) => void;
-  connection?: Connection | null;
-  sender?: string | PublicKey | null;
+  rpcEndpoint?: string;
+  connection?: RecipientRpcConnection | null;
+  sender?: RecipientAddressInput | null;
   allowSelf?: boolean;
   requireExistingAccount?: boolean;
   blockExecutableAccounts?: boolean;
@@ -103,6 +106,7 @@ export function SafeRecipientField({
   defaultValue = "",
   onValueChange,
   onValidationChange,
+  rpcEndpoint,
   connection,
   sender,
   allowSelf = false,
@@ -137,6 +141,7 @@ export function SafeRecipientField({
     connection,
     debounceMs,
     requireExistingAccount,
+    rpcEndpoint,
     sender,
     trustedAddresses,
   });
